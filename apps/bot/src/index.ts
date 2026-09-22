@@ -59,14 +59,59 @@ async function createExpense(amount: number, category: string, description: stri
   if (!res.ok) throw new Error(`API respondió ${res.status}`);
 }
 
+async function createIncome(amount: number, description: string) {
+  const res = await fetch(`${API_URL}/incomes`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY },
+    body: JSON.stringify({ amount, description, source: 'telegram' }),
+  });
+  if (!res.ok) throw new Error(`API respondió ${res.status}`);
+}
+
 const pendingExpenses = new Map<number, { amount: number; description: string }>();
 
 function isAuthorized(chatId: number): boolean {
   return chatId.toString() === TELEGRAM_CHAT_ID;
 }
 
+bot.command('saldo', async (ctx) => {
+  if (!isAuthorized(ctx.chat.id)) return;
+
+  try {
+    const res = await fetch(`${API_URL}/balance`, { headers: { 'x-api-key': API_KEY } });
+    if (!res.ok) throw new Error(`API respondió ${res.status}`);
+    const data = (await res.json()) as {
+      balance: number;
+      totalIncome: number;
+      totalExpenses: number;
+    };
+    await ctx.reply(
+      `Saldo: $${data.balance}\nIngresos: $${data.totalIncome}\nGastos: $${data.totalExpenses}`,
+    );
+  } catch {
+    await ctx.reply('No pude consultar el saldo. Probá de nuevo.');
+  }
+});
+
 bot.on('message:text', async (ctx) => {
   if (!isAuthorized(ctx.chat.id) || ctx.msg.text.startsWith('/')) return;
+
+  if (ctx.msg.text.startsWith('+')) {
+    const match = ctx.msg.text.match(/^\+(\d+(?:[.,]\d+)?)\s*(.*)$/);
+    if (!match) {
+      await ctx.reply('No entendí el monto. Mandá algo como "+50000 sueldo".');
+      return;
+    }
+    const amount = parseFloat(match[1].replace(',', '.'));
+    const description = match[2].trim();
+    try {
+      await createIncome(amount, description);
+      await ctx.reply(`Ingreso registrado: $${amount}.`);
+    } catch {
+      await ctx.reply('Hubo un error guardando el ingreso. Probá de nuevo.');
+    }
+    return;
+  }
 
   const match = ctx.msg.text.match(/^(\d+(?:[.,]\d+)?)\s*(.*)$/);
   if (!match) {
