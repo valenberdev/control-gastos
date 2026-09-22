@@ -33,3 +33,12 @@ INSERT INTO categories (name, icon) VALUES
   ('salud', 'heart'),
   ('servicios', 'bolt'),
   ('otros', 'dots');
+
+  CREATE TABLE incomes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  amount NUMERIC(12,2) NOT NULL CHECK (amount > 0),
+  description TEXT,
+  source TEXT NOT NULL CHECK (source IN ('web', 'telegram')),
+  income_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
