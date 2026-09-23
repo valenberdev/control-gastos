@@ -1,0 +1,76 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap');
+
+:root {
+  --bg: #0B0B10;
+  --surface: #17171D;
+  --text: #F5F5F7;
+  --text-muted: #9494A0;
+  --border: rgba(255, 255, 255, 0.08);
+  --accent: #5B4FE9;
+  --accent-soft: #8B7FF0;
+  --income: #34D399;
+  --expense: #F45B69;
+  --radius: 24px;
+  --font: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    --bg: #F4F3F0;
+    --surface: #FFFFFF;
+    --text: #14141A;
+    --text-muted: #6B6B75;
+    --border: rgba(0, 0, 0, 0.06);
+  }
+}
+
+:root[data-theme='light'] {
+  --bg: #F4F3F0;
+  --surface: #FFFFFF;
+  --text: #14141A;
+  --text-muted: #6B6B75;
+  --border: rgba(0, 0, 0, 0.06);
+}
+
+:root[data-theme='dark'] {
+  --bg: #0B0B10;
+  --surface: #17171D;
+  --text: #F5F5F7;
+  --text-muted: #9494A0;
+  --border: rgba(255, 255, 255, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+h1, h2, h3 {
+  margin: 0;
+  font-weight: 700;
+}
