@@ -29,3 +29,9 @@ export interface Balance {
   totalIncome: number;
   totalExpenses: number;
 }
+
+export interface TrendPoint {
+  month: string;
+  income: number;
+  expenses: number;
+}
