@@ -6,11 +6,11 @@ import BottomNav from './components/BottomNav';
 export default function App() {
   return (
     <div className="app-shell">
+      <BottomNav />
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/historial" element={<Historial />} />
       </Routes>
-      <BottomNav />
     </div>
   );
 }

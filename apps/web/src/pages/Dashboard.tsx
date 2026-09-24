@@ -73,29 +73,30 @@ export default function Dashboard() {
   }
 
   return (
-    <div
-      style={{
-        padding: "24px 16px 100px",
-        display: "flex",
-        flexDirection: "column",
-        gap: 16,
-        maxWidth: 480,
-        margin: "0 auto",
-      }}
-    >
-      {balance && <BalanceCard data={balance} />}
-      {trend.length > 0 && <TrendChart data={trend} />}
-      <MonthSwitcher month={month} onChange={setMonth} />
-      {!loading && (
-        <CategoryDonut expenses={expenses} categories={categories} />
-      )}
-      {!loading && (
-        <TransactionsList
-          expenses={expenses}
-          incomes={incomes}
-          categories={categories}
-        />
-      )}
+    <div className="dashboard-grid">
+      <div className="area-balance">
+        {balance && <BalanceCard data={balance} />}
+      </div>
+      <div className="area-trend">
+        {trend.length > 0 && <TrendChart data={trend} />}
+      </div>
+      <div className="area-month">
+        <MonthSwitcher month={month} onChange={setMonth} />
+      </div>
+      <div className="area-donut">
+        {!loading && (
+          <CategoryDonut expenses={expenses} categories={categories} />
+        )}
+      </div>
+      <div className="area-list">
+        {!loading && (
+          <TransactionsList
+            expenses={expenses}
+            incomes={incomes}
+            categories={categories}
+          />
+        )}
+      </div>
     </div>
   );
 }
