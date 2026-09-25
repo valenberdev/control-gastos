@@ -8,6 +8,7 @@ import { expensesRouter } from "./routes/expenses.js";
 import { incomesRouter } from "./routes/incomes.js";
 import { balanceRouter } from "./routes/balance.js";
 import { reportsRouter } from "./routes/reports.js";
+import { pushRouter } from "./routes/push.js";
 
 dotenv.config();
 
@@ -27,6 +28,7 @@ app.use("/expenses", requireAuth, expensesRouter);
 app.use("/incomes", requireAuth, incomesRouter);
 app.use("/balance", requireAuth, balanceRouter);
 app.use("/reports", requireAuth, reportsRouter);
+app.use("/push", requireAuth, pushRouter);
 
 app.listen(PORT, () => {
   console.log(`API escuchando en el puerto ${PORT}`);
