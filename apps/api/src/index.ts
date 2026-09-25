@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { apiKeyAuth } from './middleware/auth.js';
+import { authRouter } from './routes/auth.js';
 import { categoriesRouter } from './routes/categories.js';
 import { expensesRouter } from './routes/expenses.js';
 import { incomesRouter } from './routes/incomes.js';
@@ -20,6 +21,7 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
+app.use('/auth', authRouter);
 app.use('/categories', apiKeyAuth, categoriesRouter);
 app.use('/expenses', apiKeyAuth, expensesRouter);
 app.use('/incomes', apiKeyAuth, incomesRouter);
