@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { pool } from "../db/pool.js";
+import { notifyUser } from "../services/push.js";
 
 export const expensesRouter = Router();
 
@@ -53,9 +54,16 @@ expensesRouter.post("/", async (req, res) => {
        RETURNING id, amount, category_id, description, source, expense_date, created_at`,
       [userId, amount, categoryId, description ?? null, source],
     );
-    res
-      .status(201)
-      .json({ ...result.rows[0], amount: Number(result.rows[0].amount) });
+    const expense = {
+      ...result.rows[0],
+      amount: Number(result.rows[0].amount),
+    };
+    res.status(201).json(expense);
+
+    notifyUser(userId, {
+      title: "Gasto registrado",
+      body: `$${expense.amount}${description ? ` — ${description}` : ""}`,
+    }).catch((err) => console.error("Error al notificar:", err));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Error al crear el gasto" });
