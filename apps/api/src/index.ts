@@ -1,7 +1,6 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { apiKeyAuth } from "./middleware/auth.js";
 import { requireAuth } from "./middleware/requireAuth.js";
 import { authRouter } from "./routes/auth.js";
 import { categoriesRouter } from "./routes/categories.js";
@@ -27,7 +26,7 @@ app.use("/categories", requireAuth, categoriesRouter);
 app.use("/expenses", requireAuth, expensesRouter);
 app.use("/incomes", requireAuth, incomesRouter);
 app.use("/balance", requireAuth, balanceRouter);
-app.use("/reports", apiKeyAuth, reportsRouter);
+app.use("/reports", requireAuth, reportsRouter);
 
 app.listen(PORT, () => {
   console.log(`API escuchando en el puerto ${PORT}`);
