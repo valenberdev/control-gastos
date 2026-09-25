@@ -1,4 +1,5 @@
 import { NavLink } from "react-router";
+import NotificationBell from "./NotificationBell";
 
 const items = [
   { to: "/", label: "Inicio", icon: HomeIcon, end: true },
@@ -84,6 +85,7 @@ export default function BottomNav() {
           }}
         </NavLink>
       ))}
+      <NotificationBell />
     </nav>
   );
 }
