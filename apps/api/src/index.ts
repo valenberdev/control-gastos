@@ -26,7 +26,7 @@ app.use("/auth", authRouter);
 app.use("/categories", requireAuth, categoriesRouter);
 app.use("/expenses", requireAuth, expensesRouter);
 app.use("/incomes", requireAuth, incomesRouter);
-app.use("/balance", apiKeyAuth, balanceRouter);
+app.use("/balance", requireAuth, balanceRouter);
 app.use("/reports", apiKeyAuth, reportsRouter);
 
 app.listen(PORT, () => {
