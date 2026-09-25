@@ -24,7 +24,7 @@ app.get('/health', (_req, res) => {
 
 app.use('/auth', authRouter);
 app.use('/categories', requireAuth, categoriesRouter);
-app.use('/expenses', apiKeyAuth, expensesRouter);
+app.use('/expenses', requireAuth, expensesRouter);
 app.use('/incomes', apiKeyAuth, incomesRouter);
 app.use('/balance', apiKeyAuth, balanceRouter);
 app.use('/reports', apiKeyAuth, reportsRouter);
