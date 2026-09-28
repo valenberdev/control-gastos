@@ -285,7 +285,7 @@ h3 {
     top: 12px;
     width: fit-content;
     margin: 12px auto 0;
-    padding: 10px 32px;
+    padding: 10px 14px;
     gap: 32px;
     border: 1px solid var(--border);
     border-radius: 999px;
@@ -293,5 +293,31 @@ h3 {
 
   .bell-button {
     margin-left: 0;
+  }
+}
+
+.page-container,
+.dashboard-grid {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 64px);
+}
+
+@media (min-width: 900px) {
+  :root {
+    --bell-size: calc(var(--nav-icon-size) + 22px);
+  }
+
+  .bottom-nav {
+    padding: 10px 30px;
+    gap: 32px;
+  }
+
+  .bell-button {
+    position: fixed;
+    right: 24px;
+  }
+
+  .page-container,
+  .dashboard-grid {
+    padding-top: 40px;
   }
 }

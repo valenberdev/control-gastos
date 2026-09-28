@@ -66,26 +66,33 @@ function ProfileIcon({ color }: { color: string }) {
 
 export default function BottomNav() {
   return (
-    <nav className="bottom-nav">
-      {items.map(({ to, label, icon: Icon, end }) => (
-        <NavLink key={to} to={to} end={end} style={{ textDecoration: "none" }}>
-          {({ isActive }) => {
-            const color = isActive ? "var(--accent)" : "var(--text-muted)";
-            return (
-              <div className="nav-item">
-                <Icon color={color} />
-                <span
-                  className="nav-label"
-                  style={{ color, fontWeight: isActive ? 700 : 500 }}
-                >
-                  {label}
-                </span>
-              </div>
-            );
-          }}
-        </NavLink>
-      ))}
+    <>
+      <nav className="bottom-nav">
+        {items.map(({ to, label, icon: Icon, end }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end={end}
+            style={{ textDecoration: "none" }}
+          >
+            {({ isActive }) => {
+              const color = isActive ? "var(--accent)" : "var(--text-muted)";
+              return (
+                <div className="nav-item">
+                  <Icon color={color} />
+                  <span
+                    className="nav-label"
+                    style={{ color, fontWeight: isActive ? 700 : 500 }}
+                  >
+                    {label}
+                  </span>
+                </div>
+              );
+            }}
+          </NavLink>
+        ))}
+      </nav>
       <NotificationBell />
-    </nav>
+    </>
   );
 }
