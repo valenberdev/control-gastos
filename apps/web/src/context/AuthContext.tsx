@@ -58,9 +58,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const register = useCallback(async (email: string, password: string) => {
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const data = await post<AuthResponse>("/auth/register", {
       email,
       password,
+      timezone,
     });
     persistSession(data);
     setUser(data.user);

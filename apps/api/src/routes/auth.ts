@@ -5,14 +5,26 @@ import { pool } from "../db/pool.js";
 import { signToken } from "../middleware/jwt.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { requireInternalKey } from "../middleware/requireInternalKey.js";
+import { APP_TIMEZONE } from "../config/timezone.js";
 
 export const authRouter = Router();
 
 const DUMMY_HASH =
   "$2a$10$CwTycUXWue0Thq9StjUM0uJ8B0FMSUKUOJEOmMz+Bp9UPvcVzAoUq";
 
+async function resolveTimezone(candidate: unknown): Promise<string> {
+  if (typeof candidate === "string") {
+    const found = await pool.query(
+      "SELECT name FROM pg_timezone_names WHERE name = $1",
+      [candidate],
+    );
+    if (found.rows[0]) return found.rows[0].name;
+  }
+  return APP_TIMEZONE;
+}
+
 authRouter.post("/register", async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, timezone } = req.body;
 
   if (
     typeof email !== "string" ||
@@ -37,9 +49,10 @@ authRouter.post("/register", async (req, res) => {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
+    const userTimezone = await resolveTimezone(timezone);
     const result = await pool.query(
-      "INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id, email",
-      [email, passwordHash],
+      "INSERT INTO users (email, password_hash, timezone) VALUES ($1, $2, $3) RETURNING id, email, timezone",
+      [email, passwordHash, userTimezone],
     );
     const user = result.rows[0];
     const token = signToken({ userId: user.id });

@@ -2,6 +2,7 @@ CREATE TABLE users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
+  timezone TEXT NOT NULL DEFAULT 'America/Argentina/Buenos_Aires',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -19,7 +20,7 @@ CREATE TABLE expenses (
   category_id UUID NOT NULL REFERENCES categories(id),
   description TEXT,
   source TEXT NOT NULL CHECK (source IN ('web', 'telegram')),
-  expense_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  expense_date DATE NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -31,7 +32,7 @@ CREATE TABLE incomes (
   amount NUMERIC(12,2) NOT NULL CHECK (amount > 0),
   description TEXT,
   source TEXT NOT NULL CHECK (source IN ('web', 'telegram')),
-  income_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  income_date DATE NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
