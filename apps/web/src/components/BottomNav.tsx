@@ -75,11 +75,8 @@ export default function BottomNav() {
               <div className="nav-item">
                 <Icon color={color} />
                 <span
-                  style={{
-                    fontSize: 13,
-                    color,
-                    fontWeight: isActive ? 700 : 500,
-                  }}
+                  className="nav-label"
+                  style={{ color, fontWeight: isActive ? 700 : 500 }}
                 >
                   {label}
                 </span>

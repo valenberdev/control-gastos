@@ -235,3 +235,63 @@ h3 {
     padding: 0;
   }
 }
+
+:root {
+  --nav-icon-size: 28px;
+  --nav-label-size: 13px;
+  --bell-size: 40px;
+}
+
+.nav-icon {
+  width: var(--nav-icon-size);
+  height: var(--nav-icon-size);
+}
+
+.nav-label {
+  font-size: var(--nav-label-size);
+}
+
+.bell-button {
+  width: var(--bell-size);
+  height: var(--bell-size);
+}
+
+.bell-button svg {
+  width: calc(var(--bell-size) * 0.5);
+  height: calc(var(--bell-size) * 0.5);
+}
+
+@media (min-width: 900px) {
+  :root {
+    --nav-icon-size: 34px;
+    --nav-label-size: 17px;
+    --bell-size: 52px;
+  }
+
+  .bottom-nav {
+    padding: 20px 40px;
+    gap: 40px;
+  }
+
+  .nav-item {
+    gap: 12px;
+  }
+}
+
+@media (min-width: 900px) {
+  .bottom-nav {
+    left: auto;
+    right: auto;
+    top: 12px;
+    width: fit-content;
+    margin: 12px auto 0;
+    padding: 10px 32px;
+    gap: 32px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+  }
+
+  .bell-button {
+    margin-left: 0;
+  }
+}
