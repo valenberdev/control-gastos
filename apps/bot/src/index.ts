@@ -10,6 +10,16 @@ const BOT_MODE = process.env.BOT_MODE || "polling";
 
 const bot = new Bot(TELEGRAM_BOT_TOKEN);
 
+bot.use(async (ctx, next) => {
+  if (ctx.chat && ctx.chat.type !== "private") {
+    await ctx.reply(
+      "Este bot solo funciona en chats privados, uno a uno. No respondo en grupos.",
+    );
+    return;
+  }
+  await next();
+});
+
 const CATEGORY_SYNONYMS: Record<string, string[]> = {
   comida: [
     "comida",
@@ -60,7 +70,7 @@ async function linkTelegram(code: string, chatId: string): Promise<boolean> {
 }
 
 const tokenCache = new Map<string, { token: string; cachedAt: number }>();
-const TOKEN_TTL_MS = 6 * 24 * 60 * 60 * 1000;
+const TOKEN_TTL_MS = 6 * 24 * 60 * 60 * 1000; // 6 días, por debajo de los 7 del JWT
 
 async function getTokenForChat(chatId: string): Promise<string | null> {
   const cached = tokenCache.get(chatId);
