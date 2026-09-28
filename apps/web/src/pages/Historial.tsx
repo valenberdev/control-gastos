@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import { get } from "../api/client";
+import { get, del } from "../api/client";
 import type { Expense, Income, Category } from "../types";
 import { useAutoRefresh } from "../hooks/useAutoRefresh";
 import MonthSwitcher from "../components/MonthSwitcher";
 import TransactionsList from "../components/TransactionsList";
+import type { EditableTransaction } from "../components/TransactionsList";
+import AddMovementModal from "../components/AddMovementModal";
 
 function currentMonth(): string {
   const now = new Date();
@@ -17,6 +19,8 @@ export default function Historial() {
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<EditableTransaction | null>(null);
 
   function fetchCategories() {
     get<Category[]>("/categories")
@@ -51,6 +55,29 @@ export default function Historial() {
     fetchMonthData();
   });
 
+  function openEdit(t: EditableTransaction) {
+    setEditing(t);
+    setModalOpen(true);
+  }
+
+  function closeModal() {
+    setModalOpen(false);
+    setEditing(null);
+  }
+
+  async function handleDelete(t: EditableTransaction) {
+    if (!window.confirm("¿Borrar este movimiento? No se puede deshacer."))
+      return;
+    try {
+      const path =
+        t.type === "expense" ? `/expenses/${t.id}` : `/incomes/${t.id}`;
+      await del(path);
+      fetchMonthData();
+    } catch {
+      window.alert("No se pudo borrar. Probá de nuevo.");
+    }
+  }
+
   if (error) {
     return (
       <div style={{ padding: 24 }}>
@@ -71,8 +98,19 @@ export default function Historial() {
           incomes={incomes}
           categories={categories}
           limit={Infinity}
+          editable
+          onEdit={openEdit}
+          onDelete={handleDelete}
         />
       )}
+
+      <AddMovementModal
+        open={modalOpen}
+        categories={categories}
+        editing={editing}
+        onClose={closeModal}
+        onSaved={fetchMonthData}
+      />
     </div>
   );
 }

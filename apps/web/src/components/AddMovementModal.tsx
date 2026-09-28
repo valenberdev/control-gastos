@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, FormEvent } from "react";
-import { post } from "../api/client";
+import { post, patch } from "../api/client";
 import type { Category } from "../types";
+import type { EditableTransaction } from "./TransactionsList";
 
 interface AddMovementModalProps {
   open: boolean;
   categories: Category[];
+  editing?: EditableTransaction | null;
   onClose: () => void;
   onSaved: () => void;
 }
@@ -29,6 +31,7 @@ function parseAmount(raw: string): number | null {
 export default function AddMovementModal({
   open,
   categories,
+  editing,
   onClose,
   onSaved,
 }: AddMovementModalProps) {
@@ -46,17 +49,24 @@ export default function AddMovementModal({
     if (!dialog) return;
 
     if (open && !dialog.open) {
-      setType("expense");
-      setAmount("");
-      setCategoryId(null);
-      setDescription("");
+      if (editing) {
+        setType(editing.type);
+        setAmount(String(editing.amount));
+        setCategoryId(editing.categoryId ?? null);
+        setDescription(editing.description ?? "");
+      } else {
+        setType("expense");
+        setAmount("");
+        setCategoryId(null);
+        setDescription("");
+      }
       setError(null);
       dialog.showModal();
       amountRef.current?.focus();
     } else if (!open && dialog.open) {
       dialog.close();
     }
-  }, [open]);
+  }, [open, editing]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -77,7 +87,19 @@ export default function AddMovementModal({
     setSaving(true);
     try {
       const trimmed = description.trim();
-      if (type === "expense") {
+
+      if (editing) {
+        const path =
+          editing.type === "expense"
+            ? `/expenses/${editing.id}`
+            : `/incomes/${editing.id}`;
+        const body: Record<string, unknown> = {
+          amount: value,
+          description: trimmed || null,
+        };
+        if (editing.type === "expense") body.categoryId = categoryId;
+        await patch(path, body);
+      } else if (type === "expense") {
         await post("/expenses", {
           amount: value,
           categoryId,
@@ -128,7 +150,7 @@ export default function AddMovementModal({
           }}
         >
           <h2 id="movement-title" style={{ fontSize: 18 }}>
-            Agregar movimiento
+            {editing ? "Editar movimiento" : "Agregar movimiento"}
           </h2>
           <button
             type="button"
@@ -162,7 +184,9 @@ export default function AddMovementModal({
                 key={value}
                 type="button"
                 aria-pressed={active}
+                disabled={!!editing}
                 onClick={() => {
+                  if (editing) return;
                   setType(value);
                   setError(null);
                 }}
@@ -174,7 +198,8 @@ export default function AddMovementModal({
                   fontSize: 14,
                   fontWeight: 700,
                   fontFamily: "inherit",
-                  cursor: "pointer",
+                  cursor: editing ? "default" : "pointer",
+                  opacity: editing && !active ? 0.4 : 1,
                   background: active ? "var(--accent)" : "transparent",
                   color: active ? "#fff" : "var(--text-muted)",
                 }}
@@ -245,9 +270,11 @@ export default function AddMovementModal({
         <button type="submit" disabled={saving} className="btn-primary">
           {saving
             ? "Guardando..."
-            : type === "expense"
-              ? "Guardar gasto"
-              : "Guardar ingreso"}
+            : editing
+              ? "Guardar cambios"
+              : type === "expense"
+                ? "Guardar gasto"
+                : "Guardar ingreso"}
         </button>
       </form>
     </dialog>
