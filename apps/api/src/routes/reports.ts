@@ -3,38 +3,53 @@ import { pool } from "../db/pool.js";
 
 export const reportsRouter = Router();
 
+const PERIOD_COUNTS = {
+  day: 14,
+  week: 8,
+  month: 6,
+} as const;
+
+type Period = keyof typeof PERIOD_COUNTS;
+
+function isPeriod(value: unknown): value is Period {
+  return value === "day" || value === "week" || value === "month";
+}
+
 reportsRouter.get("/trend", async (req, res) => {
-  const months = Number(req.query.months) || 6;
+  const period: Period = isPeriod(req.query.period)
+    ? req.query.period
+    : "month";
+  const count = PERIOD_COUNTS[period];
   const userId = req.userId!;
 
   try {
     const result = await pool.query(
-      `WITH months AS (
+      `WITH buckets AS (
          SELECT generate_series(
-           date_trunc('month', now()) - interval '1 month' * ($2::int - 1),
-           date_trunc('month', now()),
-           interval '1 month'
-         ) AS month
+           date_trunc($2::text, now()) - ($3::int - 1) * ('1 ' || $2::text)::interval,
+           date_trunc($2::text, now()),
+           ('1 ' || $2::text)::interval
+         ) AS bucket
        )
        SELECT
-         to_char(m.month, 'YYYY-MM') AS month,
+         to_char(b.bucket, 'YYYY-MM-DD') AS bucket,
          COALESCE(i.total, 0) AS income,
          COALESCE(e.total, 0) AS expenses
-       FROM months m
+       FROM buckets b
        LEFT JOIN (
-         SELECT date_trunc('month', income_date) AS month, SUM(amount) AS total
+         SELECT date_trunc($2::text, income_date) AS bucket, SUM(amount) AS total
          FROM incomes WHERE user_id = $1 GROUP BY 1
-       ) i ON i.month = m.month
+       ) i ON i.bucket = b.bucket
        LEFT JOIN (
-         SELECT date_trunc('month', expense_date) AS month, SUM(amount) AS total
+         SELECT date_trunc($2::text, expense_date) AS bucket, SUM(amount) AS total
          FROM expenses WHERE user_id = $1 GROUP BY 1
-       ) e ON e.month = m.month
-       ORDER BY m.month`,
-      [userId, months],
+       ) e ON e.bucket = b.bucket
+       ORDER BY b.bucket`,
+      [userId, period, count],
     );
     res.json(
       result.rows.map((r) => ({
-        month: r.month,
+        bucket: r.bucket,
         income: Number(r.income),
         expenses: Number(r.expenses),
       })),
