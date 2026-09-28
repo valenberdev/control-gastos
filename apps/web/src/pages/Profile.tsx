@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { post } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import ThemeToggle from "../components/ThemeToggle";
+import TimezoneSetting from "../components/TimezoneSetting";
 
 interface LinkCodeResponse {
   code: string;
@@ -67,6 +68,8 @@ export default function Profile() {
         <span style={{ fontSize: 15 }}>Tema claro</span>
         <ThemeToggle />
       </div>
+
+      <TimezoneSetting />
 
       <div
         className="card"

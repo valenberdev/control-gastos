@@ -31,11 +31,9 @@ authRouter.post("/register", async (req, res) => {
     typeof password !== "string" ||
     password.length < 8
   ) {
-    res
-      .status(400)
-      .json({
-        error: "Email inválido o contraseña muy corta (mínimo 8 caracteres)",
-      });
+    res.status(400).json({
+      error: "Email inválido o contraseña muy corta (mínimo 8 caracteres)",
+    });
     return;
   }
 
@@ -169,5 +167,52 @@ authRouter.post("/telegram-token", requireInternalKey, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Error al generar el token" });
+  }
+});
+
+authRouter.get("/me", requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT id, email, timezone FROM users WHERE id = $1",
+      [req.userId!],
+    );
+    const user = result.rows[0];
+    if (!user) {
+      res.status(404).json({ error: "Usuario no encontrado" });
+      return;
+    }
+    res.json(user);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error al obtener el usuario" });
+  }
+});
+
+authRouter.patch("/timezone", requireAuth, async (req, res) => {
+  const { timezone } = req.body;
+
+  if (typeof timezone !== "string") {
+    res.status(400).json({ error: "Zona horaria inválida" });
+    return;
+  }
+
+  try {
+    const found = await pool.query(
+      "SELECT name FROM pg_timezone_names WHERE name = $1",
+      [timezone],
+    );
+    if (!found.rows[0]) {
+      res.status(400).json({ error: "Zona horaria inválida" });
+      return;
+    }
+
+    await pool.query("UPDATE users SET timezone = $1 WHERE id = $2", [
+      found.rows[0].name,
+      req.userId!,
+    ]);
+    res.json({ timezone: found.rows[0].name });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error al actualizar la zona horaria" });
   }
 });

@@ -42,3 +42,7 @@ export function del<T>(path: string, body?: unknown): Promise<T> {
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
   });
 }
+
+export function patch<T>(path: string, body: unknown): Promise<T> {
+  return request<T>(path, { method: "PATCH", body: JSON.stringify(body) });
+}
