@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { pool } from "../db/pool.js";
+import { APP_TIMEZONE } from "../config/timezone.js";
 
 export const reportsRouter = Router();
 
@@ -26,8 +27,8 @@ reportsRouter.get("/trend", async (req, res) => {
     const result = await pool.query(
       `WITH buckets AS (
          SELECT generate_series(
-           date_trunc($2::text, now()) - ($3::int - 1) * ('1 ' || $2::text)::interval,
-           date_trunc($2::text, now()),
+           date_trunc($2::text, now() AT TIME ZONE $4::text) - ($3::int - 1) * ('1 ' || $2::text)::interval,
+           date_trunc($2::text, now() AT TIME ZONE $4::text),
            ('1 ' || $2::text)::interval
          ) AS bucket
        )
@@ -37,15 +38,15 @@ reportsRouter.get("/trend", async (req, res) => {
          COALESCE(e.total, 0) AS expenses
        FROM buckets b
        LEFT JOIN (
-         SELECT date_trunc($2::text, income_date) AS bucket, SUM(amount) AS total
+         SELECT date_trunc($2::text, income_date::timestamp) AS bucket, SUM(amount) AS total
          FROM incomes WHERE user_id = $1 GROUP BY 1
        ) i ON i.bucket = b.bucket
        LEFT JOIN (
-         SELECT date_trunc($2::text, expense_date) AS bucket, SUM(amount) AS total
+         SELECT date_trunc($2::text, expense_date::timestamp) AS bucket, SUM(amount) AS total
          FROM expenses WHERE user_id = $1 GROUP BY 1
        ) e ON e.bucket = b.bucket
        ORDER BY b.bucket`,
-      [userId, period, count],
+      [userId, period, count, APP_TIMEZONE],
     );
     res.json(
       result.rows.map((r) => ({

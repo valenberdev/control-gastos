@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { pool } from "../db/pool.js";
 import { notifyUser } from "../services/push.js";
+import { APP_TIMEZONE } from "../config/timezone.js";
 
 export const incomesRouter = Router();
 
@@ -44,10 +45,10 @@ incomesRouter.post("/", async (req, res) => {
 
   try {
     const result = await pool.query(
-      `INSERT INTO incomes (user_id, amount, description, source)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO incomes (user_id, amount, description, source, income_date)
+       VALUES ($1, $2, $3, $4, (now() AT TIME ZONE $5::text)::date)
        RETURNING id, amount, description, source, income_date, created_at`,
-      [userId, amount, description ?? null, source],
+      [userId, amount, description ?? null, source, APP_TIMEZONE],
     );
     const income = { ...result.rows[0], amount: Number(result.rows[0].amount) };
     res.status(201).json(income);
