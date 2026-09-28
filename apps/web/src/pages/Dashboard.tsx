@@ -41,10 +41,13 @@ export default function Dashboard() {
   const periodRef = useRef(period);
   periodRef.current = period;
 
-  function fetchGlobal() {
+  function fetchCategories() {
     get<Category[]>("/categories")
       .then(setCategories)
       .catch(() => setError(true));
+  }
+
+  function fetchBalance() {
     get<Balance>("/balance")
       .then(setBalance)
       .catch(() => setError(true));
@@ -74,7 +77,7 @@ export default function Dashboard() {
   }
 
   function handleSaved() {
-    fetchGlobal();
+    fetchBalance();
     fetchTrend();
     if (month !== currentMonth()) {
       setMonth(currentMonth());
@@ -84,7 +87,8 @@ export default function Dashboard() {
   }
 
   useEffect(() => {
-    fetchGlobal();
+    fetchCategories();
+    fetchBalance();
   }, []);
 
   useEffect(() => {
@@ -97,7 +101,7 @@ export default function Dashboard() {
   }, [month]);
 
   useAutoRefresh(() => {
-    fetchGlobal();
+    fetchBalance();
     fetchTrend();
     fetchMonthData();
   });

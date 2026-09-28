@@ -51,7 +51,6 @@ export default function Historial() {
   }, [month]);
 
   useAutoRefresh(() => {
-    fetchCategories();
     fetchMonthData();
   });
 
