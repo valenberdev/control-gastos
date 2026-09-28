@@ -1,6 +1,7 @@
 import { Routes, Route } from "react-router";
 import Dashboard from "./pages/Dashboard";
 import Historial from "./pages/Historial";
+import Profile from "./pages/Profile";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import BottomNav from "./components/BottomNav";
@@ -31,6 +32,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Historial />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/perfil"
+          element={
+            <ProtectedRoute>
+              <Profile />
             </ProtectedRoute>
           }
         />
