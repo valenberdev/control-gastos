@@ -13,6 +13,10 @@ import { pushRouter } from "./routes/push.js";
 dotenv.config();
 
 const app = express();
+const trustProxyHops = Number(process.env.TRUST_PROXY_HOPS) || 0;
+if (trustProxyHops > 0) {
+  app.set('trust proxy', trustProxyHops);
+}
 const PORT = process.env.PORT || 3000;
 
 app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:5173" }));
