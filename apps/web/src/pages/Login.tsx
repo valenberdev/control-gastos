@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../context/AuthContext";
 import AuthTabs from "../components/AuthTabs";
+import { ApiError } from "../api/client";
 
 export default function Login() {
   const { login } = useAuth();
@@ -18,8 +19,12 @@ export default function Login() {
     try {
       await login(email, password);
       navigate("/");
-    } catch {
-      setError("Email o contraseña incorrectos.");
+    } catch (err) {
+      setError(
+        err instanceof ApiError && err.status === 429
+          ? "Demasiados intentos. Esperá unos minutos y probá de nuevo."
+          : "Email o contraseña incorrectos.",
+      );
     } finally {
       setSubmitting(false);
     }

@@ -1,11 +1,25 @@
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
+export class ApiError extends Error {
+  status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
 function getToken(): string | null {
   return localStorage.getItem("token");
 }
 
+function isAuthAttempt(path: string): boolean {
+  return path === "/auth/login" || path === "/auth/register";
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = getToken();
+  const token = isAuthAttempt(path) ? null : getToken();
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: {
@@ -15,14 +29,15 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     },
   });
 
-  if (res.status === 401) {
+  if (res.status === 401 && !isAuthAttempt(path)) {
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
     window.location.href = "/login";
-    throw new Error("No autorizado");
+    throw new ApiError(401, "No autorizado");
   }
 
   if (!res.ok) {
-    throw new Error(`Error ${res.status} en ${path}`);
+    throw new ApiError(res.status, `Error ${res.status} en ${path}`);
   }
 
   return res.json() as Promise<T>;

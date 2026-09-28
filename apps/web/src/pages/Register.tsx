@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../context/AuthContext";
 import AuthTabs from "../components/AuthTabs";
+import { ApiError } from "../api/client";
 
 export default function Register() {
   const { register } = useAuth();
@@ -24,9 +25,11 @@ export default function Register() {
     try {
       await register(email, password);
       navigate("/");
-    } catch {
+    } catch (err) {
       setError(
-        "No se pudo crear la cuenta. Puede que ese email ya esté registrado.",
+        err instanceof ApiError && err.status === 429
+          ? "Demasiados intentos. Esperá un rato y probá de nuevo."
+          : "No se pudo crear la cuenta. Puede que ese email ya esté registrado.",
       );
     } finally {
       setSubmitting(false);
