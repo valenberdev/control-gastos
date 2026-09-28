@@ -27,6 +27,11 @@ const dateFormatter = new Intl.DateTimeFormat("es-AR", {
   month: "short",
 });
 
+function parseDateOnly(value: string): Date {
+  const [year, month, day] = value.slice(0, 10).split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
 function capitalize(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
@@ -104,7 +109,7 @@ export default function TransactionsList({
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
             <span style={{ fontSize: 14 }}>{t.label}</span>
             <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
-              {dateFormatter.format(new Date(t.date))}
+              {dateFormatter.format(parseDateOnly(t.date))}
             </span>
           </div>
           <span
