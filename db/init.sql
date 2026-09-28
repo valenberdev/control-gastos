@@ -24,7 +24,7 @@ CREATE TABLE expenses (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_expenses_user_category_date ON expenses (user_id, category_id, expense_date);
+CREATE INDEX idx_expenses_user_date ON expenses (user_id, expense_date);
 
 CREATE TABLE incomes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -68,6 +68,8 @@ CREATE TABLE push_subscriptions (
   auth TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE INDEX idx_push_subscriptions_user ON push_subscriptions (user_id);
 
 INSERT INTO categories (name, icon) VALUES
   ('comida', 'utensils'),
