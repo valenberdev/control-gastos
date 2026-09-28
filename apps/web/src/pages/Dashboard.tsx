@@ -14,6 +14,7 @@ import TrendChart from "../components/TrendChart";
 import CategoryDonut from "../components/CategoryDonut";
 import TransactionsList from "../components/TransactionsList";
 import MonthSwitcher from "../components/MonthSwitcher";
+import AddMovementModal from "../components/AddMovementModal";
 
 function currentMonth(): string {
   const now = new Date();
@@ -35,6 +36,7 @@ export default function Dashboard() {
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
 
   const periodRef = useRef(period);
   periodRef.current = period;
@@ -71,6 +73,16 @@ export default function Dashboard() {
       .catch(() => setError(true));
   }
 
+  function handleSaved() {
+    fetchGlobal();
+    fetchTrend();
+    if (month !== currentMonth()) {
+      setMonth(currentMonth());
+    } else {
+      fetchMonthData();
+    }
+  }
+
   useEffect(() => {
     fetchGlobal();
   }, []);
@@ -101,37 +113,64 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="dashboard-grid">
-      <div className="area-balance">
-        {balance && <BalanceCard data={balance} />}
+    <>
+      <div className="dashboard-grid">
+        <div className="area-balance">
+          {balance && <BalanceCard data={balance} />}
+        </div>
+        <div className="area-trend">
+          {trend && (
+            <TrendChart
+              data={trend.points}
+              dataPeriod={trend.period}
+              selectedPeriod={period}
+              onPeriodChange={setPeriod}
+            />
+          )}
+        </div>
+        <div className="area-month">
+          <MonthSwitcher month={month} onChange={setMonth} />
+        </div>
+        <div className="area-donut">
+          {!loading && (
+            <CategoryDonut expenses={expenses} categories={categories} />
+          )}
+        </div>
+        <div className="area-list">
+          {!loading && (
+            <TransactionsList
+              expenses={expenses}
+              incomes={incomes}
+              categories={categories}
+            />
+          )}
+        </div>
       </div>
-      <div className="area-trend">
-        {trend && (
-          <TrendChart
-            data={trend.points}
-            dataPeriod={trend.period}
-            selectedPeriod={period}
-            onPeriodChange={setPeriod}
-          />
-        )}
-      </div>
-      <div className="area-month">
-        <MonthSwitcher month={month} onChange={setMonth} />
-      </div>
-      <div className="area-donut">
-        {!loading && (
-          <CategoryDonut expenses={expenses} categories={categories} />
-        )}
-      </div>
-      <div className="area-list">
-        {!loading && (
-          <TransactionsList
-            expenses={expenses}
-            incomes={incomes}
-            categories={categories}
-          />
-        )}
-      </div>
-    </div>
+
+      <button
+        className="fab"
+        onClick={() => setModalOpen(true)}
+        aria-label="Agregar movimiento"
+      >
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+        >
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+      </button>
+
+      <AddMovementModal
+        open={modalOpen}
+        categories={categories}
+        onClose={() => setModalOpen(false)}
+        onSaved={handleSaved}
+      />
+    </>
   );
 }
