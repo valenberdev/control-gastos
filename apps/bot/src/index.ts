@@ -1,4 +1,5 @@
-import { Bot, InlineKeyboard } from "grammy";
+import http from "node:http";
+import { Bot, InlineKeyboard, webhookCallback } from "grammy";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -7,6 +8,9 @@ const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN!;
 const API_URL = process.env.API_URL || "http://api:3000";
 const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY!;
 const BOT_MODE = process.env.BOT_MODE || "polling";
+const PORT = process.env.PORT || 3000;
+const WEBHOOK_URL = process.env.WEBHOOK_URL;
+const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
 
 const bot = new Bot(TELEGRAM_BOT_TOKEN);
 
@@ -289,7 +293,46 @@ if (BOT_MODE === "polling") {
   bot.start();
   console.log("Bot corriendo en modo polling");
 } else {
-  console.log(
-    "Modo webhook: pendiente, se implementa en Fase 4 junto con el servidor de producción",
+  if (!WEBHOOK_URL || !WEBHOOK_SECRET) {
+    throw new Error(
+      "BOT_MODE=webhook necesita WEBHOOK_URL y WEBHOOK_SECRET configurados.",
+    );
+  }
+
+  await bot.init();
+
+  try {
+    await bot.api.setWebhook(WEBHOOK_URL, { secret_token: WEBHOOK_SECRET });
+    console.log("Webhook registrado en Telegram:", WEBHOOK_URL);
+  } catch (err) {
+    console.error("No se pudo registrar el webhook en Telegram:", err);
+  }
+
+  const handleUpdate = webhookCallback(bot, "http", {
+    secretToken: WEBHOOK_SECRET,
+  });
+
+  const server = http.createServer((req, res) => {
+    if (req.method === "POST" && req.url === "/webhook") {
+      handleUpdate(req, res).catch((err) => {
+        console.error("Error procesando update de Telegram:", err);
+        if (!res.headersSent) {
+          res.writeHead(500);
+          res.end();
+        }
+      });
+      return;
+    }
+    if (req.method === "GET" && req.url === "/health") {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ status: "ok" }));
+      return;
+    }
+    res.writeHead(404);
+    res.end();
+  });
+
+  server.listen(PORT, () =>
+    console.log(`Bot escuchando webhooks en el puerto ${PORT}`),
   );
 }
