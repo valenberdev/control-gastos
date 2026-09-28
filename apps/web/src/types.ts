@@ -10,7 +10,7 @@ export interface Expense {
   amount: number;
   category_id: string;
   description: string | null;
-  source: 'web' | 'telegram';
+  source: "web" | "telegram";
   expense_date: string;
   created_at: string;
 }
@@ -19,7 +19,7 @@ export interface Income {
   id: string;
   amount: number;
   description: string | null;
-  source: 'web' | 'telegram';
+  source: "web" | "telegram";
   income_date: string;
   created_at: string;
 }
@@ -31,7 +31,9 @@ export interface Balance {
 }
 
 export interface TrendPoint {
-  month: string;
+  bucket: string;
   income: number;
   expenses: number;
 }
+
+export type TrendPeriod = "day" | "week" | "month";

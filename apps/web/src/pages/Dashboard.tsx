@@ -1,6 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { get } from "../api/client";
-import type { Balance, TrendPoint, Expense, Income, Category } from "../types";
+import type {
+  Balance,
+  TrendPoint,
+  TrendPeriod,
+  Expense,
+  Income,
+  Category,
+} from "../types";
 import { useAutoRefresh } from "../hooks/useAutoRefresh";
 import BalanceCard from "../components/BalanceCard";
 import TrendChart from "../components/TrendChart";
@@ -13,15 +20,24 @@ function currentMonth(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
+interface TrendState {
+  period: TrendPeriod;
+  points: TrendPoint[];
+}
+
 export default function Dashboard() {
   const [month, setMonth] = useState(currentMonth());
+  const [period, setPeriod] = useState<TrendPeriod>("month");
   const [balance, setBalance] = useState<Balance | null>(null);
-  const [trend, setTrend] = useState<TrendPoint[]>([]);
+  const [trend, setTrend] = useState<TrendState | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+
+  const periodRef = useRef(period);
+  periodRef.current = period;
 
   function fetchGlobal() {
     get<Category[]>("/categories")
@@ -30,8 +46,15 @@ export default function Dashboard() {
     get<Balance>("/balance")
       .then(setBalance)
       .catch(() => setError(true));
-    get<TrendPoint[]>("/reports/trend?months=6")
-      .then(setTrend)
+  }
+
+  function fetchTrend() {
+    const requested = period;
+    get<TrendPoint[]>(`/reports/trend?period=${requested}`)
+      .then((points) => {
+        if (requested === periodRef.current)
+          setTrend({ period: requested, points });
+      })
       .catch(() => setError(true));
   }
 
@@ -53,12 +76,17 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
+    fetchTrend();
+  }, [period]);
+
+  useEffect(() => {
     setLoading(true);
     fetchMonthData().finally(() => setLoading(false));
   }, [month]);
 
   useAutoRefresh(() => {
     fetchGlobal();
+    fetchTrend();
     fetchMonthData();
   });
 
@@ -78,7 +106,14 @@ export default function Dashboard() {
         {balance && <BalanceCard data={balance} />}
       </div>
       <div className="area-trend">
-        {trend.length > 0 && <TrendChart data={trend} />}
+        {trend && (
+          <TrendChart
+            data={trend.points}
+            dataPeriod={trend.period}
+            selectedPeriod={period}
+            onPeriodChange={setPeriod}
+          />
+        )}
       </div>
       <div className="area-month">
         <MonthSwitcher month={month} onChange={setMonth} />
