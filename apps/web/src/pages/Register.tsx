@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router";
+import { useNavigate } from "react-router";
 import { useAuth } from "../context/AuthContext";
+import AuthTabs from "../components/AuthTabs";
 
 export default function Register() {
   const { register } = useAuth();
@@ -53,7 +54,14 @@ export default function Register() {
           gap: 16,
         }}
       >
-        <h1 style={{ fontSize: 22 }}>Crear cuenta</h1>
+        <AuthTabs />
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <h1 style={{ fontSize: 22 }}>Creá tu cuenta</h1>
+          <span style={{ fontSize: 13, color: "var(--text-muted)" }}>
+            Registrate con tu email para empezar a controlar tus gastos.
+          </span>
+        </div>
 
         <label
           style={{
@@ -68,6 +76,7 @@ export default function Register() {
           <input
             type="email"
             required
+            autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             style={inputStyle}
@@ -87,10 +96,12 @@ export default function Register() {
           <input
             type="password"
             required
+            autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             style={inputStyle}
           />
+          <span style={{ fontSize: 12 }}>Mínimo 8 caracteres.</span>
         </label>
 
         {error && (
@@ -100,19 +111,6 @@ export default function Register() {
         <button type="submit" disabled={submitting} style={buttonStyle}>
           {submitting ? "Creando cuenta..." : "Crear cuenta"}
         </button>
-
-        <span
-          style={{
-            fontSize: 13,
-            color: "var(--text-muted)",
-            textAlign: "center",
-          }}
-        >
-          ¿Ya tenés cuenta?{" "}
-          <Link to="/login" style={{ color: "var(--accent)" }}>
-            Iniciá sesión
-          </Link>
-        </span>
       </form>
     </div>
   );

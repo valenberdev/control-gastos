@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router";
+import { useNavigate } from "react-router";
 import { useAuth } from "../context/AuthContext";
+import AuthTabs from "../components/AuthTabs";
 
 export default function Login() {
   const { login } = useAuth();
@@ -45,7 +46,14 @@ export default function Login() {
           gap: 16,
         }}
       >
-        <h1 style={{ fontSize: 22 }}>Iniciar sesión</h1>
+        <AuthTabs />
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <h1 style={{ fontSize: 22 }}>Bienvenido de nuevo</h1>
+          <span style={{ fontSize: 13, color: "var(--text-muted)" }}>
+            Ingresá con tu email y contraseña.
+          </span>
+        </div>
 
         <label
           style={{
@@ -60,6 +68,7 @@ export default function Login() {
           <input
             type="email"
             required
+            autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             style={inputStyle}
@@ -79,6 +88,7 @@ export default function Login() {
           <input
             type="password"
             required
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             style={inputStyle}
@@ -92,19 +102,6 @@ export default function Login() {
         <button type="submit" disabled={submitting} style={buttonStyle}>
           {submitting ? "Ingresando..." : "Ingresar"}
         </button>
-
-        <span
-          style={{
-            fontSize: 13,
-            color: "var(--text-muted)",
-            textAlign: "center",
-          }}
-        >
-          ¿No tenés cuenta?{" "}
-          <Link to="/registro" style={{ color: "var(--accent)" }}>
-            Registrate
-          </Link>
-        </span>
       </form>
     </div>
   );
