@@ -215,3 +215,23 @@ h3 {
     margin-left: auto;
   }
 }
+
+.nav-icon {
+  width: 28px;
+  height: 28px;
+}
+
+.nav-item {
+  padding: 2px 14px;
+}
+
+@media (min-width: 900px) {
+  .nav-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .nav-item {
+    padding: 0;
+  }
+}

@@ -10,8 +10,9 @@ const items = [
 function HomeIcon({ color }: { color: string }) {
   return (
     <svg
-      width="22"
-      height="22"
+      className="nav-icon"
+      width="28"
+      height="28"
       viewBox="0 0 24 24"
       fill="none"
       stroke={color}
@@ -28,8 +29,9 @@ function HomeIcon({ color }: { color: string }) {
 function HistoryIcon({ color }: { color: string }) {
   return (
     <svg
-      width="22"
-      height="22"
+      className="nav-icon"
+      width="28"
+      height="28"
       viewBox="0 0 24 24"
       fill="none"
       stroke={color}
@@ -46,8 +48,9 @@ function HistoryIcon({ color }: { color: string }) {
 function ProfileIcon({ color }: { color: string }) {
   return (
     <svg
-      width="22"
-      height="22"
+      className="nav-icon"
+      width="28"
+      height="28"
       viewBox="0 0 24 24"
       fill="none"
       stroke={color}
@@ -73,7 +76,7 @@ export default function BottomNav() {
                 <Icon color={color} />
                 <span
                   style={{
-                    fontSize: 12,
+                    fontSize: 13,
                     color,
                     fontWeight: isActive ? 700 : 500,
                   }}
