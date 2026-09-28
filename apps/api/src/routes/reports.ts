@@ -1,6 +1,5 @@
 import { Router } from "express";
 import { pool } from "../db/pool.js";
-import { APP_TIMEZONE } from "../config/timezone.js";
 
 export const reportsRouter = Router();
 
@@ -25,10 +24,13 @@ reportsRouter.get("/trend", async (req, res) => {
 
   try {
     const result = await pool.query(
-      `WITH buckets AS (
+      `WITH tz AS (
+         SELECT timezone FROM users WHERE id = $1
+       ),
+       buckets AS (
          SELECT generate_series(
-           date_trunc($2::text, now() AT TIME ZONE $4::text) - ($3::int - 1) * ('1 ' || $2::text)::interval,
-           date_trunc($2::text, now() AT TIME ZONE $4::text),
+           date_trunc($2::text, now() AT TIME ZONE (SELECT timezone FROM tz)) - ($3::int - 1) * ('1 ' || $2::text)::interval,
+           date_trunc($2::text, now() AT TIME ZONE (SELECT timezone FROM tz)),
            ('1 ' || $2::text)::interval
          ) AS bucket
        )
@@ -46,7 +48,7 @@ reportsRouter.get("/trend", async (req, res) => {
          FROM expenses WHERE user_id = $1 GROUP BY 1
        ) e ON e.bucket = b.bucket
        ORDER BY b.bucket`,
-      [userId, period, count, APP_TIMEZONE],
+      [userId, period, count],
     );
     res.json(
       result.rows.map((r) => ({
