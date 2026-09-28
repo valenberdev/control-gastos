@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { pool } from "../db/pool.js";
 import { notifyUser } from "../services/push.js";
+import { isUuid, isValidAmount } from "../lib/validation.js";
 
 export const expensesRouter = Router();
 
@@ -38,9 +39,8 @@ expensesRouter.post("/", async (req, res) => {
   const userId = req.userId!;
 
   if (
-    !amount ||
-    amount <= 0 ||
-    !categoryId ||
+    !isValidAmount(amount) ||
+    !isUuid(categoryId) ||
     !["web", "telegram"].includes(source)
   ) {
     res.status(400).json({ error: "Datos inválidos" });
@@ -67,5 +67,100 @@ expensesRouter.post("/", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Error al crear el gasto" });
+  }
+});
+
+expensesRouter.patch("/:id", async (req, res) => {
+  const { id } = req.params;
+  const userId = req.userId!;
+  const { amount, categoryId, description } = req.body;
+
+  if (!isUuid(id)) {
+    res.status(404).json({ error: "Gasto no encontrado" });
+    return;
+  }
+
+  const sets: string[] = [];
+  const values: unknown[] = [];
+
+  if (amount !== undefined) {
+    if (!isValidAmount(amount)) {
+      res.status(400).json({ error: "Monto inválido" });
+      return;
+    }
+    values.push(amount);
+    sets.push(`amount = $${values.length}`);
+  }
+
+  if (categoryId !== undefined) {
+    if (!isUuid(categoryId)) {
+      res.status(400).json({ error: "Categoría inválida" });
+      return;
+    }
+    values.push(categoryId);
+    sets.push(`category_id = $${values.length}`);
+  }
+
+  if (description !== undefined) {
+    if (description !== null && typeof description !== "string") {
+      res.status(400).json({ error: "Descripción inválida" });
+      return;
+    }
+    values.push(description?.trim() || null);
+    sets.push(`description = $${values.length}`);
+  }
+
+  if (sets.length === 0) {
+    res.status(400).json({ error: "No hay nada para actualizar" });
+    return;
+  }
+
+  values.push(id, userId);
+
+  try {
+    const result = await pool.query(
+      `UPDATE expenses SET ${sets.join(", ")}
+       WHERE id = $${values.length - 1} AND user_id = $${values.length}
+       RETURNING id, amount, category_id, description, source, expense_date, created_at`,
+      values,
+    );
+    const row = result.rows[0];
+    if (!row) {
+      res.status(404).json({ error: "Gasto no encontrado" });
+      return;
+    }
+    res.json({ ...row, amount: Number(row.amount) });
+  } catch (err) {
+    if ((err as { code?: string }).code === "23503") {
+      res.status(400).json({ error: "La categoría no existe" });
+      return;
+    }
+    console.error(err);
+    res.status(500).json({ error: "Error al actualizar el gasto" });
+  }
+});
+
+expensesRouter.delete("/:id", async (req, res) => {
+  const { id } = req.params;
+  const userId = req.userId!;
+
+  if (!isUuid(id)) {
+    res.status(404).json({ error: "Gasto no encontrado" });
+    return;
+  }
+
+  try {
+    const result = await pool.query(
+      "DELETE FROM expenses WHERE id = $1 AND user_id = $2",
+      [id, userId],
+    );
+    if (result.rowCount === 0) {
+      res.status(404).json({ error: "Gasto no encontrado" });
+      return;
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error al borrar el gasto" });
   }
 });

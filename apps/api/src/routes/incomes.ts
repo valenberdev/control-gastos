@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { pool } from "../db/pool.js";
 import { notifyUser } from "../services/push.js";
+import { isUuid, isValidAmount } from "../lib/validation.js";
 
 export const incomesRouter = Router();
 
@@ -37,7 +38,7 @@ incomesRouter.post("/", async (req, res) => {
   const { amount, description, source } = req.body;
   const userId = req.userId!;
 
-  if (!amount || amount <= 0 || !["web", "telegram"].includes(source)) {
+  if (!isValidAmount(amount) || !["web", "telegram"].includes(source)) {
     res.status(400).json({ error: "Datos inválidos" });
     return;
   }
@@ -59,5 +60,87 @@ incomesRouter.post("/", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Error al crear el ingreso" });
+  }
+});
+
+incomesRouter.patch("/:id", async (req, res) => {
+  const { id } = req.params;
+  const userId = req.userId!;
+  const { amount, description } = req.body;
+
+  if (!isUuid(id)) {
+    res.status(404).json({ error: "Ingreso no encontrado" });
+    return;
+  }
+
+  const sets: string[] = [];
+  const values: unknown[] = [];
+
+  if (amount !== undefined) {
+    if (!isValidAmount(amount)) {
+      res.status(400).json({ error: "Monto inválido" });
+      return;
+    }
+    values.push(amount);
+    sets.push(`amount = $${values.length}`);
+  }
+
+  if (description !== undefined) {
+    if (description !== null && typeof description !== "string") {
+      res.status(400).json({ error: "Descripción inválida" });
+      return;
+    }
+    values.push(description?.trim() || null);
+    sets.push(`description = $${values.length}`);
+  }
+
+  if (sets.length === 0) {
+    res.status(400).json({ error: "No hay nada para actualizar" });
+    return;
+  }
+
+  values.push(id, userId);
+
+  try {
+    const result = await pool.query(
+      `UPDATE incomes SET ${sets.join(", ")}
+       WHERE id = $${values.length - 1} AND user_id = $${values.length}
+       RETURNING id, amount, description, source, income_date, created_at`,
+      values,
+    );
+    const row = result.rows[0];
+    if (!row) {
+      res.status(404).json({ error: "Ingreso no encontrado" });
+      return;
+    }
+    res.json({ ...row, amount: Number(row.amount) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error al actualizar el ingreso" });
+  }
+});
+
+incomesRouter.delete("/:id", async (req, res) => {
+  const { id } = req.params;
+  const userId = req.userId!;
+
+  if (!isUuid(id)) {
+    res.status(404).json({ error: "Ingreso no encontrado" });
+    return;
+  }
+
+  try {
+    const result = await pool.query(
+      "DELETE FROM incomes WHERE id = $1 AND user_id = $2",
+      [id, userId],
+    );
+    if (result.rowCount === 0) {
+      res.status(404).json({ error: "Ingreso no encontrado" });
+      return;
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error al borrar el ingreso" });
   }
 });
