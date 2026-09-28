@@ -15,7 +15,8 @@ expensesRouter.get("/", async (req, res) => {
           `SELECT id, amount, category_id, description, source, expense_date, created_at
            FROM expenses
            WHERE user_id = $1
-             AND date_trunc('month', expense_date) = date_trunc('month', $2::date)
+             AND expense_date >= $2::date
+             AND expense_date < ($2::date + interval '1 month')::date
            ORDER BY expense_date DESC, created_at DESC`,
           [userId, `${month}-01`],
         )

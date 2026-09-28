@@ -15,7 +15,8 @@ incomesRouter.get("/", async (req, res) => {
           `SELECT id, amount, description, source, income_date, created_at
            FROM incomes
            WHERE user_id = $1
-             AND date_trunc('month', income_date) = date_trunc('month', $2::date)
+             AND income_date >= $2::date
+             AND income_date < ($2::date + interval '1 month')::date
            ORDER BY income_date DESC, created_at DESC`,
           [userId, `${month}-01`],
         )
