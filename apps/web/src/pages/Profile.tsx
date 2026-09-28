@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { post } from "../api/client";
 import { useAuth } from "../context/AuthContext";
+import ThemeToggle from "../components/ThemeToggle";
 
 interface LinkCodeResponse {
   code: string;
@@ -53,6 +54,18 @@ export default function Profile() {
       >
         <span style={{ fontSize: 13, color: "var(--text-muted)" }}>Cuenta</span>
         <span style={{ fontSize: 15 }}>{user?.email}</span>
+      </div>
+
+      <div
+        className="card"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <span style={{ fontSize: 15 }}>Tema claro</span>
+        <ThemeToggle />
       </div>
 
       <div
