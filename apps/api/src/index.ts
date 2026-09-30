@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { requireAuth } from "./middleware/requireAuth.js";
+import { requireInternalKey } from "./middleware/requireInternalKey.js";
 import { authRouter } from "./routes/auth.js";
 import { categoriesRouter } from "./routes/categories.js";
 import { expensesRouter } from "./routes/expenses.js";
@@ -13,17 +14,26 @@ import { pushRouter } from "./routes/push.js";
 dotenv.config();
 
 const app = express();
+const PORT = process.env.PORT || 3000;
+
 const trustProxyHops = Number(process.env.TRUST_PROXY_HOPS) || 0;
 if (trustProxyHops > 0) {
-  app.set('trust proxy', trustProxyHops);
+  app.set("trust proxy", trustProxyHops);
 }
-const PORT = process.env.PORT || 3000;
 
 app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:5173" }));
 app.use(express.json());
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
+});
+
+app.get("/debug/ip", requireInternalKey, (req, res) => {
+  res.json({
+    ip: req.ip,
+    xForwardedFor: req.headers["x-forwarded-for"] ?? null,
+    remoteAddress: req.socket.remoteAddress,
+  });
 });
 
 app.use("/auth", authRouter);
