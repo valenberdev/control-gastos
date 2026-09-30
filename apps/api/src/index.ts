@@ -2,7 +2,6 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { requireAuth } from "./middleware/requireAuth.js";
-import { requireInternalKey } from "./middleware/requireInternalKey.js";
 import { authRouter } from "./routes/auth.js";
 import { categoriesRouter } from "./routes/categories.js";
 import { expensesRouter } from "./routes/expenses.js";
@@ -28,13 +27,6 @@ app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
-app.get("/debug/ip", requireInternalKey, (req, res) => {
-  res.json({
-    ip: req.ip,
-    xForwardedFor: req.headers["x-forwarded-for"] ?? null,
-    remoteAddress: req.socket.remoteAddress,
-  });
-});
 
 app.use("/auth", authRouter);
 app.use("/categories", requireAuth, categoriesRouter);
