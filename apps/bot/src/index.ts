@@ -1,6 +1,7 @@
 import http from "node:http";
 import { Bot, InlineKeyboard, webhookCallback } from "grammy";
 import dotenv from "dotenv";
+import { CATEGORY_SYNONYMS, parseMessage } from "./parser/parser.js";
 
 dotenv.config();
 
@@ -39,23 +40,6 @@ bot.use(async (ctx, next) => {
   }
   await next();
 });
-
-const CATEGORY_SYNONYMS: Record<string, string[]> = {
-  comida: [
-    "comida",
-    "super",
-    "almuerzo",
-    "cena",
-    "desayuno",
-    "restaurante",
-    "delivery",
-  ],
-  transporte: ["transporte", "uber", "colectivo", "nafta", "taxi", "subte"],
-  entretenimiento: ["entretenimiento", "cine", "streaming", "salida", "bar"],
-  salud: ["salud", "farmacia", "medico", "remedios"],
-  servicios: ["servicios", "luz", "gas", "internet", "alquiler", "celular"],
-  otros: ["otros"],
-};
 
 let categoryIds: Record<string, string> = {};
 
@@ -218,6 +202,24 @@ bot.on("message:text", async (ctx) => {
     return;
   }
 
+  const parsed = parseMessage(ctx.msg.text);
+  if (parsed.kind === "invalid") {
+    await ctx.reply(
+      'No entendí el monto. Mandá algo como "500 comida", "1.500 super" o "+50000 sueldo".',
+    );
+    return;
+  }
+
+  if (parsed.kind === "income") {
+    try {
+      await createIncome(token, parsed.amount, parsed.description);
+      await ctx.reply(`Ingreso registrado: $${parsed.amount}.`);
+    } catch {
+      await ctx.reply("Hubo un error guardando el ingreso. Probá de nuevo.");
+    }
+    return;
+  }
+
   try {
     await ensureCategories(token);
   } catch {
@@ -227,49 +229,31 @@ bot.on("message:text", async (ctx) => {
     return;
   }
 
-  if (ctx.msg.text.startsWith("+")) {
-    const match = ctx.msg.text.match(/^\+(\d+(?:[.,]\d+)?)\s*(.*)$/);
-    if (!match) {
-      await ctx.reply('No entendí el monto. Mandá algo como "+50000 sueldo".');
-      return;
-    }
-    const amount = parseFloat(match[1].replace(",", "."));
-    const description = match[2].trim();
+  if (parsed.category) {
     try {
-      await createIncome(token, amount, description);
-      await ctx.reply(`Ingreso registrado: $${amount}.`);
-    } catch {
-      await ctx.reply("Hubo un error guardando el ingreso. Probá de nuevo.");
-    }
-    return;
-  }
-
-  const match = ctx.msg.text.match(/^(\d+(?:[.,]\d+)?)\s*(.*)$/);
-  if (!match) {
-    await ctx.reply('No entendí el monto. Mandá algo como "500 comida".');
-    return;
-  }
-
-  const amount = parseFloat(match[1].replace(",", "."));
-  const description = match[2].trim();
-  const category = matchCategory(description);
-
-  if (category) {
-    try {
-      await createExpense(token, amount, category, description);
-      await ctx.reply(`Registrado: $${amount} en ${category}.`);
+      await createExpense(
+        token,
+        parsed.amount,
+        parsed.category,
+        parsed.description,
+      );
+      await ctx.reply(`Registrado: $${parsed.amount} en ${parsed.category}.`);
     } catch {
       await ctx.reply("Hubo un error guardando el gasto. Probá de nuevo.");
     }
     return;
   }
 
-  pendingExpenses.set(chatId, { amount, description, token });
+  pendingExpenses.set(chatId, {
+    amount: parsed.amount,
+    description: parsed.description,
+    token,
+  });
   const keyboard = Object.keys(CATEGORY_SYNONYMS).reduce(
     (kb, cat) => kb.text(cat, cat).row(),
     new InlineKeyboard(),
   );
-  await ctx.reply(`¿En qué categoría entra "$${amount}"?`, {
+  await ctx.reply(`¿En qué categoría entra "$${parsed.amount}"?`, {
     reply_markup: keyboard,
   });
 });
