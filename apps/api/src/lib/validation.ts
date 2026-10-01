@@ -21,3 +21,11 @@ const MONTH_REGEX = /^(19|20)\d{2}-(0[1-9]|1[0-2])$/;
 export function isMonth(value: unknown): value is string {
   return typeof value === "string" && MONTH_REGEX.test(value);
 }
+
+export function isChatId(value: unknown): value is string {
+  return typeof value === "string" && /^-?\d{1,20}$/.test(value);
+}
+
+export function isLinkCode(value: unknown): value is string {
+  return typeof value === "string" && /^\d{6}$/.test(value);
+}

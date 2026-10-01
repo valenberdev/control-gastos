@@ -17,6 +17,7 @@ import {
   resetPasswordLimiter,
 } from "../middleware/rateLimit.js";
 import { passwordResetEmail, sendEmail } from "../services/email.js";
+import { isChatId, isLinkCode } from "../lib/validation.js";
 
 export const authRouter = Router();
 
@@ -121,10 +122,14 @@ authRouter.post(
   linkCodeLimiter,
   async (req, res) => {
     const userId = req.userId!;
-    const code = String(crypto.randomInt(100000, 999999));
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    const code = String(crypto.randomInt(100000, 1000000));
+    const expiresAt = new Date(Date.now() + LINK_CODE_TTL_MS);
 
     try {
+      await pool.query(
+        "DELETE FROM link_codes WHERE user_id = $1 OR expires_at < now()",
+        [userId],
+      );
       await pool.query(
         "INSERT INTO link_codes (code, user_id, expires_at) VALUES ($1, $2, $3)",
         [code, userId, expiresAt],
@@ -144,33 +149,40 @@ authRouter.post(
   async (req, res) => {
     const { code, chatId } = req.body;
 
-    if (typeof code !== "string" || typeof chatId !== "string") {
+    if (!isLinkCode(code) || !isChatId(chatId)) {
       res.status(400).json({ error: "Datos inválidos" });
       return;
     }
 
+    const client = await pool.connect();
     try {
-      const result = await pool.query(
-        "SELECT user_id FROM link_codes WHERE code = $1 AND expires_at > now()",
+      await client.query("BEGIN");
+
+      const used = await client.query(
+        "DELETE FROM link_codes WHERE code = $1 AND expires_at > now() RETURNING user_id",
         [code],
       );
-      const row = result.rows[0];
+      const row = used.rows[0];
       if (!row) {
+        await client.query("ROLLBACK");
         res.status(404).json({ error: "Código inválido o expirado" });
         return;
       }
 
-      await pool.query(
+      await client.query(
         `INSERT INTO telegram_links (chat_id, user_id) VALUES ($1, $2)
        ON CONFLICT (chat_id) DO UPDATE SET user_id = $2, linked_at = now()`,
         [chatId, row.user_id],
       );
-      await pool.query("DELETE FROM link_codes WHERE code = $1", [code]);
+      await client.query("COMMIT");
 
       res.status(200).json({ success: true });
     } catch (err) {
+      await client.query("ROLLBACK").catch(() => {});
       console.error(err);
       res.status(500).json({ error: "Error al vincular la cuenta" });
+    } finally {
+      client.release();
     }
   },
 );
@@ -178,7 +190,7 @@ authRouter.post(
 authRouter.post("/telegram-token", requireInternalKey, async (req, res) => {
   const { chatId } = req.body;
 
-  if (typeof chatId !== "string") {
+  if (!isChatId(chatId)) {
     res.status(400).json({ error: "Datos inválidos" });
     return;
   }
@@ -250,6 +262,7 @@ authRouter.patch("/timezone", requireAuth, async (req, res) => {
 });
 
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
+const LINK_CODE_TTL_MS = 10 * 60 * 1000;
 
 function hashToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
