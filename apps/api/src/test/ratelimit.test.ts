@@ -289,3 +289,33 @@ describe("vínculo de Telegram", () => {
     expect(otroChat.status).toBe(200);
   });
 });
+
+describe("eliminar cuenta", () => {
+  it("bloquea tras 5 contraseñas incorrectas, aunque después sea la correcta", async () => {
+    const ana = await createUser({
+      email: "ana@example.com",
+      password: PASSWORD,
+    });
+    const fresh = await freshApi();
+    rateLimitsOn();
+
+    const statuses: number[] = [];
+    for (let i = 0; i < 6; i++) {
+      statuses.push(
+        (
+          await fresh
+            .delete("/auth/me")
+            .set(auth(ana))
+            .send({ password: WRONG })
+        ).status,
+      );
+    }
+    const conClaveCorrecta = await fresh
+      .delete("/auth/me")
+      .set(auth(ana))
+      .send({ password: PASSWORD });
+
+    expect(statuses).toEqual([403, 403, 403, 403, 403, 429]);
+    expect(conClaveCorrecta.status).toBe(429);
+  });
+});

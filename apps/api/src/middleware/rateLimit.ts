@@ -83,3 +83,11 @@ export const resetPasswordLimiter = rateLimit({
   limit: 10,
   skipSuccessfulRequests: true,
 });
+
+export const deleteAccountLimiter = rateLimit({
+  ...base,
+  windowMs: 15 * MINUTE,
+  limit: 5,
+  skipSuccessfulRequests: true,
+  keyGenerator: (req) => req.userId ?? clientIp(req),
+});

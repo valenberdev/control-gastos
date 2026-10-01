@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { pool } from "../db/pool.js";
 import { signToken } from "../middleware/jwt.js";
-import { requireAuth } from "../middleware/requireAuth.js";
+import { forgetUser, requireAuth } from "../middleware/requireAuth.js";
 import { requireInternalKey } from "../middleware/requireInternalKey.js";
 import { APP_TIMEZONE } from "../config/timezone.js";
 import {
@@ -15,6 +15,7 @@ import {
   loginIpLimiter,
   registerLimiter,
   resetPasswordLimiter,
+  deleteAccountLimiter,
 } from "../middleware/rateLimit.js";
 import { passwordResetEmail, sendEmail } from "../services/email.js";
 import { isChatId, isLinkCode } from "../lib/validation.js";
@@ -369,3 +370,39 @@ authRouter.post("/reset-password", resetPasswordLimiter, async (req, res) => {
     client.release();
   }
 });
+
+authRouter.delete(
+  "/me",
+  requireAuth,
+  deleteAccountLimiter,
+  async (req, res) => {
+    const userId = req.userId!;
+    const { password } = req.body;
+
+    if (typeof password !== "string" || password.length === 0) {
+      res.status(400).json({ error: "Falta la contraseña" });
+      return;
+    }
+
+    try {
+      const result = await pool.query(
+        "SELECT password_hash FROM users WHERE id = $1",
+        [userId],
+      );
+      const hash: string | undefined = result.rows[0]?.password_hash;
+      const matches = await bcrypt.compare(password, hash ?? DUMMY_HASH);
+
+      if (!hash || !matches) {
+        res.status(403).json({ error: "Contraseña incorrecta" });
+        return;
+      }
+
+      await pool.query("DELETE FROM users WHERE id = $1", [userId]);
+      forgetUser(userId);
+      res.json({ success: true });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Error al eliminar la cuenta" });
+    }
+  },
+);
