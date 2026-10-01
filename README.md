@@ -49,6 +49,7 @@ Capturas de la app con datos de ejemplo.
 - **Bot de Telegram:** acepta `500 comida`, `1.500 super` (el punto es separador de miles), `+50000 sueldo` para ingresos y `/saldo`. Si el gasto no trae una categoría reconocida, pregunta con botones. Solo responde en chats privados.
 - **Notificaciones push** al registrar un gasto o un ingreso, desde la web o desde el bot.
 - **PWA:** instalable, con service worker propio que guarda en caché los archivos de la aplicación (los datos no están disponibles sin conexión). Tema claro y oscuro.
+- **Eliminar la cuenta** desde Perfil, con confirmación de contraseña: borra también los movimientos, el vínculo con Telegram y las suscripciones push.
 
 ## Arquitectura
 
@@ -133,6 +134,7 @@ Lo que está implementado:
 - CORS limitado a un único origen (`FRONTEND_URL`). Conexión a la base cifrada con TLS en producción (`DATABASE_SSL`).
 - La Data API automática de Supabase está desactivada: la única puerta a los datos es la API propia, con su autenticación y sus límites.
 - Los `.env` están en `.gitignore`; las claves viven solo en las variables de entorno de cada servicio.
+- Cada pedido autenticado verifica que la cuenta siga existiendo (con un cache de 30 segundos): al eliminar una cuenta, sus sesiones dejan de valer en segundos y no a los 7 días.
 
 Lo que **no** está: encabezados de seguridad (por ejemplo `helmet`), revocación de sesiones, doble factor de autenticación. Ver [Limitaciones](#limitaciones-conocidas-y-próximos-pasos).
 
@@ -214,6 +216,7 @@ Las rutas marcadas «Sesión» exigen `Authorization: Bearer <JWT>`; «Clave int
 | GET | `/balance` | Sesión |
 | GET | `/reports/trend?period=day\|week\|month` | Sesión |
 | POST, DELETE | `/push/subscribe` | Sesión |
+| DELETE | `/auth/me` | Sesión (pide la contraseña) |
 
 ## Estructura del repositorio
 
@@ -237,17 +240,21 @@ PRODUCT.md, DESIGN.md Documentos de producto y de diseño del frontend
 
 - La API, el bot y la base viven en planes gratuitos, con *cold starts* de hasta cerca de un minuto.
 - Los límites de intentos están en memoria: se reinician con cada reinicio del servicio. El bot también guarda en memoria los `update_id` vistos y las categorías pendientes de elegir.
-- Los tokens de sesión (7 días) no se revocan al cambiar la contraseña ni al cerrar sesión; cerrar sesión solo borra el token del navegador.
+- Los tokens de sesión (7 días) no se revocan al cambiar la contraseña ni al cerrar sesión; cerrar sesión solo borra el token del navegador. Sí dejan de valer cuando se elimina la cuenta.
 - La conexión a la base va cifrada pero sin verificar el certificado del servidor (se puede activar con `DATABASE_CA_CERT`).
 - La recuperación de contraseña por email no llega a cualquier persona hasta verificar un dominio en Resend.
-- No hay verificación de email ni una forma de borrar la cuenta y sus datos.
+- No hay verificación de email.
 - No se configuraron respaldos propios de la base de datos.
 - No hay login con Google, presupuestos, gastos recurrentes ni exportación a CSV. La tabla `recurring_expenses` y la columna `monthly_budget` existen en el esquema, pero ninguna funcionalidad las usa.
 - Las categorías son fijas y compartidas por todas las cuentas, y la interfaz muestra los montos en pesos argentinos.
 - No hay tests del frontend ni de la entrega real de push, del webhook del bot o de Resend.
 - Las migraciones se aplican a mano y en orden; no hay una herramienta que registre cuáles se corrieron.
 
-Próximos pasos posibles: verificar un dominio en Resend, verificación de email y borrado de cuenta, revocar sesiones al cambiar la contraseña, guardar los límites de intentos fuera de la memoria del proceso, agregar tests del frontend y encabezados de seguridad.
+Próximos pasos posibles: verificar un dominio en Resend, verificación de email, revocar sesiones al cambiar la contraseña, guardar los límites de intentos fuera de la memoria del proceso, agregar tests del frontend y encabezados de seguridad.
+
+## Licencia
+
+[MIT](LICENSE). Puedes usar, copiar y modificar el código; solo hay que conservar el aviso de copyright.
 
 ## Autor
 
