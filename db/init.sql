@@ -3,7 +3,8 @@ CREATE TABLE users (
   email TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
   timezone TEXT NOT NULL DEFAULT 'America/Argentina/Buenos_Aires',
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT users_email_lowercase CHECK (email = lower(email))
 );
 
 CREATE TABLE categories (
@@ -70,6 +71,16 @@ CREATE TABLE push_subscriptions (
 );
 
 CREATE INDEX idx_push_subscriptions_user ON push_subscriptions (user_id);
+
+CREATE TABLE password_resets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL UNIQUE,
+  expires_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_password_resets_user ON password_resets (user_id);
 
 INSERT INTO categories (name, icon) VALUES
   ('comida', 'utensils'),
