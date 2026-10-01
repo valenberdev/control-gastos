@@ -5,14 +5,30 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN!;
-const API_URL = process.env.API_URL || "http://api:3000";
+const API_URL = (process.env.API_URL || "http://api:3000").replace(/\/+$/, "");
 const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY!;
 const BOT_MODE = process.env.BOT_MODE || "polling";
 const PORT = process.env.PORT || 3000;
-const WEBHOOK_URL = process.env.WEBHOOK_URL;
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
+const WEBHOOK_URL =
+  process.env.WEBHOOK_URL ||
+  (process.env.RENDER_EXTERNAL_URL
+    ? `${process.env.RENDER_EXTERNAL_URL.replace(/\/+$/, "")}/webhook`
+    : undefined);
 
 const bot = new Bot(TELEGRAM_BOT_TOKEN);
+
+const recentUpdateIds = new Set<number>();
+bot.use(async (ctx, next) => {
+  const id = ctx.update.update_id;
+  if (recentUpdateIds.has(id)) return;
+  recentUpdateIds.add(id);
+  if (recentUpdateIds.size > 500) {
+    const oldest = recentUpdateIds.values().next().value;
+    if (oldest !== undefined) recentUpdateIds.delete(oldest);
+  }
+  await next();
+});
 
 bot.use(async (ctx, next) => {
   if (ctx.chat && ctx.chat.type !== "private") {
@@ -295,21 +311,15 @@ if (BOT_MODE === "polling") {
 } else {
   if (!WEBHOOK_URL || !WEBHOOK_SECRET) {
     throw new Error(
-      "BOT_MODE=webhook necesita WEBHOOK_URL y WEBHOOK_SECRET configurados.",
+      "BOT_MODE=webhook necesita WEBHOOK_SECRET y una URL pública (WEBHOOK_URL, o RENDER_EXTERNAL_URL en Render).",
     );
   }
 
   await bot.init();
 
-  try {
-    await bot.api.setWebhook(WEBHOOK_URL, { secret_token: WEBHOOK_SECRET });
-    console.log("Webhook registrado en Telegram:", WEBHOOK_URL);
-  } catch (err) {
-    console.error("No se pudo registrar el webhook en Telegram:", err);
-  }
-
   const handleUpdate = webhookCallback(bot, "http", {
     secretToken: WEBHOOK_SECRET,
+    onTimeout: "return",
   });
 
   const server = http.createServer((req, res) => {
@@ -332,7 +342,14 @@ if (BOT_MODE === "polling") {
     res.end();
   });
 
-  server.listen(PORT, () =>
-    console.log(`Bot escuchando webhooks en el puerto ${PORT}`),
-  );
+  await new Promise<void>((resolve) => server.listen(PORT, resolve));
+  console.log(`Bot escuchando webhooks en el puerto ${PORT}`);
+
+  try {
+    await bot.api.setWebhook(WEBHOOK_URL, { secret_token: WEBHOOK_SECRET });
+    console.log("Webhook registrado en Telegram:", WEBHOOK_URL);
+  } catch (err) {
+    console.error("No se pudo registrar el webhook en Telegram:", err);
+    process.exit(1);
+  }
 }
