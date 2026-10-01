@@ -8,18 +8,20 @@ balanceRouter.get("/", async (req, res) => {
 
   try {
     const result = await pool.query(
-      `SELECT
-        COALESCE((SELECT SUM(amount) FROM incomes WHERE user_id = $1), 0) AS total_income,
-        COALESCE((SELECT SUM(amount) FROM expenses WHERE user_id = $1), 0) AS total_expenses`,
+      `WITH totals AS (
+         SELECT
+           COALESCE((SELECT SUM(amount) FROM incomes WHERE user_id = $1), 0) AS total_income,
+           COALESCE((SELECT SUM(amount) FROM expenses WHERE user_id = $1), 0) AS total_expenses
+       )
+       SELECT total_income, total_expenses, total_income - total_expenses AS balance FROM totals`,
       [userId],
     );
-    const totalIncome = Number(result.rows[0].total_income);
-    const totalExpenses = Number(result.rows[0].total_expenses);
+    const row = result.rows[0];
 
     res.json({
-      balance: totalIncome - totalExpenses,
-      totalIncome,
-      totalExpenses,
+      balance: Number(row.balance),
+      totalIncome: Number(row.total_income),
+      totalExpenses: Number(row.total_expenses),
     });
   } catch (err) {
     console.error(err);
