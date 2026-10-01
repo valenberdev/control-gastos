@@ -3,6 +3,7 @@ import { post } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import ThemeToggle from "../components/ThemeToggle";
 import TimezoneSetting from "../components/TimezoneSetting";
+import DeleteAccountSection from "../components/DeleteAccountSection";
 
 interface LinkCodeResponse {
   code: string;
@@ -96,6 +97,8 @@ export default function Profile() {
       <button onClick={logout} className="btn-secondary">
         Cerrar sesión
       </button>
+
+      <DeleteAccountSection />
     </div>
   );
 }

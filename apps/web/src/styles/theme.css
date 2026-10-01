@@ -1743,3 +1743,55 @@ input[type="password"]::-ms-clear {
   color: var(--income);
   font-size: 13px;
 }
+
+.btn-secondary {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: inherit;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.btn-danger {
+  border: none;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: inherit;
+  background: #d63a4a;
+  color: #fff;
+  cursor: pointer;
+}
+
+.btn-danger:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.danger-zone {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-color: rgba(244, 91, 105, 0.4);
+}
+
+.dialog-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.dialog-actions>* {
+  flex: 1;
+}
