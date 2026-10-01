@@ -17,6 +17,8 @@ export const CATEGORY_SYNONYMS: Record<string, string[]> = {
 };
 
 const MAX_AMOUNT = 9_999_999_999.99;
+// Mismo tope que la API (MAX_DESCRIPTION_LENGTH): un mensaje más largo se recorta.
+export const MAX_DESCRIPTION_LENGTH = 200;
 
 export type ParsedMessage =
   | { kind: "income"; amount: number; description: string }
@@ -69,12 +71,13 @@ export function parseMessage(text: string): ParsedMessage {
   const amount = parseAmount(match[1]);
   if (amount === null) return { kind: "invalid" };
 
-  const description = match[2].trim();
+  const fullText = match[2].trim();
+  const description = fullText.slice(0, MAX_DESCRIPTION_LENGTH);
   if (isIncome) return { kind: "income", amount, description };
   return {
     kind: "expense",
     amount,
     description,
-    category: matchCategory(description),
+    category: matchCategory(fullText),
   };
 }

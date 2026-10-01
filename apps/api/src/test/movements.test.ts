@@ -106,6 +106,9 @@ describe("POST /expenses", () => {
     ["monto como texto", { amount: "100" }],
     ["monto por encima del máximo", { amount: 10_000_000_000 }],
     ["sin monto", { amount: undefined }],
+    ["monto con más de 2 decimales", { amount: 10.123 }],
+    ["descripción que no es texto", { description: 5 }],
+    ["descripción de más de 200 caracteres", { description: "a".repeat(201) }],
     ["categoría que no es un UUID", { categoryId: "comida" }],
     ["sin categoría", { categoryId: undefined }],
     ["origen desconocido", { source: "api" }],
@@ -202,6 +205,23 @@ describe("PATCH /expenses/:id", () => {
       description: "cambiado",
     });
     expect(res.body.expense_date).toBe(created.body.expense_date);
+  });
+
+  it("rechaza un monto con más de 2 decimales o una descripción larga", async () => {
+    const user = await createUser();
+    const created = await createExpense(user);
+
+    const decimales = await api
+      .patch(`/expenses/${created.body.id}`)
+      .set(auth(user))
+      .send({ amount: 10.123 });
+    const larga = await api
+      .patch(`/expenses/${created.body.id}`)
+      .set(auth(user))
+      .send({ description: "a".repeat(201) });
+
+    expect(decimales.status).toBe(400);
+    expect(larga.status).toBe(400);
   });
 
   it("con description null borra la descripción", async () => {
@@ -344,6 +364,27 @@ describe("ingresos", () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ amount: 2000.5, description: null });
+  });
+
+  it("rechaza montos con más de 2 decimales y descripciones demasiado largas", async () => {
+    const user = await createUser();
+
+    const decimales = await createIncome(user, { amount: 0.001 });
+    const larga = await createIncome(user, { description: "a".repeat(201) });
+    const maximo = await createIncome(user, { description: "a".repeat(200) });
+
+    expect(decimales.status).toBe(400);
+    expect(larga.status).toBe(400);
+    expect(maximo.status).toBe(201);
+  });
+
+  it("acepta montos con centavos", async () => {
+    const user = await createUser();
+
+    const res = await createIncome(user, { amount: 1500.1 });
+
+    expect(res.status).toBe(201);
+    expect(res.body.amount).toBe(1500.1);
   });
 
   it("rechaza un PATCH sin campos o con un monto inválido", async () => {

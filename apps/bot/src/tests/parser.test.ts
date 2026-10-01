@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { matchCategory, parseAmount, parseMessage } from "../parser/parser";
+import {
+  MAX_DESCRIPTION_LENGTH,
+  matchCategory,
+  parseAmount,
+  parseMessage,
+} from "../parser/parser";
 
 describe("parseAmount", () => {
   it.each([
@@ -147,6 +152,17 @@ describe("parseMessage: ingresos", () => {
       amount: 1500,
       description: "",
     });
+  });
+});
+
+describe("parseMessage: descripciones largas", () => {
+  it("recorta la descripción al tope de la API pero reconoce la categoría del texto completo", () => {
+    const largo = `500 ${"x ".repeat(150)}comida`;
+
+    const parsed = parseMessage(largo);
+
+    expect(parsed).toMatchObject({ kind: "expense", amount: 500, category: "comida" });
+    expect(parsed.kind === "expense" && parsed.description.length).toBe(MAX_DESCRIPTION_LENGTH);
   });
 });
 

@@ -1,7 +1,12 @@
 import { Router } from "express";
 import { pool } from "../db/pool.js";
 import { notifyUser } from "../services/push.js";
-import { isUuid, isValidAmount, isMonth } from "../lib/validation.js";
+import {
+  isUuid,
+  isValidAmount,
+  isValidDescription,
+  isMonth,
+} from "../lib/validation.js";
 
 export const expensesRouter = Router();
 
@@ -49,6 +54,7 @@ expensesRouter.post("/", async (req, res) => {
   if (
     !isValidAmount(amount) ||
     !isUuid(categoryId) ||
+    !isValidDescription(description) ||
     !["web", "telegram"].includes(source)
   ) {
     res.status(400).json({ error: "Datos inválidos" });
@@ -115,7 +121,7 @@ expensesRouter.patch("/:id", async (req, res) => {
   }
 
   if (description !== undefined) {
-    if (description !== null && typeof description !== "string") {
+    if (!isValidDescription(description)) {
       res.status(400).json({ error: "Descripción inválida" });
       return;
     }
