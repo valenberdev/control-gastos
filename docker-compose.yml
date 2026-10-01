@@ -40,11 +40,14 @@ services:
       FRONTEND_URL: http://localhost:5173
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       EMAIL_FROM: ${EMAIL_FROM:-}
+      TEST_DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}_test
+      DB_INIT_SQL: /db/init.sql
     ports:
       - "3000:3000"
     volumes:
       - ./apps/api:/app
       - /app/node_modules
+      - ./db/init.sql:/db/init.sql:ro
     depends_on:
       db:
         condition: service_healthy

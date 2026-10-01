@@ -6,6 +6,9 @@ const MINUTE = 60 * 1000;
 const base = {
   standardHeaders: "draft-7" as const,
   legacyHeaders: false,
+  skip: () =>
+    process.env.NODE_ENV !== "production" &&
+    process.env.RATE_LIMIT_DISABLED === "true",
   message: {
     error: "Demasiados intentos. Esperá unos minutos y probá de nuevo.",
   },
