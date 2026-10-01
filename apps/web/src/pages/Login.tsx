@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { useAuth } from "../context/AuthContext";
 import AuthTabs from "../components/AuthTabs";
 import AppMark from "../components/AppMark";
@@ -62,6 +62,12 @@ export default function Login() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
+
+        <div className="auth-link-row">
+          <Link to="/olvide-mi-contrasena" className="auth-link">
+            ¿Olvidaste tu contraseña?
+          </Link>
+        </div>
 
         {error && <span className="form-error">{error}</span>}
 
