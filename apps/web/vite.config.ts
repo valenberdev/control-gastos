@@ -18,15 +18,15 @@ export default defineConfig({
         name: "Control de Gastos",
         short_name: "Gastos",
         description: "Control personal de ingresos y gastos por categoría",
-        theme_color: "#0B0B10",
-        background_color: "#0B0B10",
+        theme_color: "#05070F",
+        background_color: "#05070F",
         display: "standalone",
         start_url: "/",
         icons: [
           { src: "icon-192.png", sizes: "192x192", type: "image/png" },
           { src: "icon-512.png", sizes: "512x512", type: "image/png" },
           {
-            src: "icon-512.png",
+            src: "icon-maskable-512.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "maskable",

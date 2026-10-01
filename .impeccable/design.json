@@ -1,0 +1,169 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-30T00:00:00.000Z",
+  "title": "Design System: Control de Gastos",
+  "extensions": {
+    "colorMeta": {
+      "accent-fill": { "role": "primary", "displayName": "Liquid Blue", "canonical": "#0a5fe0", "tonalRamp": ["#04265c", "#063a8c", "#0a5fe0", "#1470ee", "#3d8bf2", "#5ca4ff", "#a8cdff", "#e0eeff"] },
+      "income-fill": { "role": "secondary", "displayName": "Income Green", "canonical": "#2fbf5a", "tonalRamp": ["#0a3d1a", "#137a37", "#1f9c47", "#2fbf5a", "#5fe08a", "#8fe9ab", "#c4f4d3", "#e8fbef"] },
+      "expense-fill": { "role": "secondary", "displayName": "Expense Red", "canonical": "#ff4a40", "tonalRamp": ["#5c0a14", "#8f1020", "#c4172a", "#e83235", "#ff4a40", "#ff6e66", "#ff8a80", "#ffd6d3"] },
+      "bg-base-light": { "role": "neutral", "displayName": "Pale Sky", "canonical": "#e9edf7", "tonalRamp": ["#565b6e", "#8a90a6", "#b4bace", "#cdd3e4", "#dde2f0", "#e9edf7", "#f2f4fb", "#fafbff"] },
+      "bg-base-dark": { "role": "neutral", "displayName": "Midnight", "canonical": "#05070f", "tonalRamp": ["#05070f", "#0b0f1d", "#141a2e", "#1c2238", "#2a3150", "#3d4468", "#5b6285", "#a6abc0"] },
+      "cat-comida": { "role": "tertiary", "displayName": "Comida Orange", "canonical": "#FF6B2C", "tonalRamp": ["#7a2a0a", "#b8430f", "#FF6B2C", "#FF8a4a", "#FFA53D", "#FFbd70", "#FFd8a8", "#FFeed9"] },
+      "cat-transporte": { "role": "tertiary", "displayName": "Transporte Sky", "canonical": "#0A84FF", "tonalRamp": ["#04336b", "#075fc0", "#0A84FF", "#3d9fff", "#5AC8FA", "#8fdbfc", "#c2ebfd", "#e6f7ff"] },
+      "cat-entretenimiento": { "role": "tertiary", "displayName": "Entretenimiento Violet", "canonical": "#A64DE8", "tonalRamp": ["#4a1a70", "#7a2fb5", "#A64DE8", "#bb70ee", "#D68CFF", "#e3adff", "#efd0ff", "#f8ebff"] },
+      "cat-salud": { "role": "tertiary", "displayName": "Salud Pink", "canonical": "#F0366B", "tonalRamp": ["#6e0f2c", "#a8184a", "#F0366B", "#f55f89", "#FF7A9C", "#ff9db7", "#ffc4d3", "#ffe6ec"] },
+      "cat-servicios": { "role": "tertiary", "displayName": "Servicios Mint", "canonical": "#12A87F", "tonalRamp": ["#05453a", "#0a7a5c", "#12A87F", "#2cc29a", "#3DDBB0", "#7ae8c9", "#b3f2de", "#e0faf2"] },
+      "cat-otros": { "role": "tertiary", "displayName": "Otros Grey", "canonical": "#7A7F93", "tonalRamp": ["#2e3140", "#4a4e60", "#7A7F93", "#8f94a6", "#A6AABB", "#c0c3d0", "#dcdee6", "#f0f1f5"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Balance figure", "purpose": "The hero balance number, fitted to card width by container query, tabular, tight tracking." },
+      "headline": { "displayName": "Page title", "purpose": "34px page and auth titles." },
+      "title": { "displayName": "Section title", "purpose": "Ledger title, month label, module titles." },
+      "body": { "displayName": "Row text", "purpose": "Ledger labels, category names, buttons, inputs." },
+      "label": { "displayName": "Label", "purpose": "Field labels, dates, legends, nav labels." }
+    },
+    "shadows": [
+      { "name": "glass-shadow-light", "value": "0 1px 1px rgba(30,44,100,0.05), 0 12px 32px -8px rgba(40,60,140,0.18), 0 28px 64px -28px rgba(40,60,140,0.25)", "purpose": "Soft blue-violet drop shadow under glass panes (light)." },
+      { "name": "glass-shadow-dark", "value": "0 1px 1px rgba(0,0,0,0.35), 0 16px 44px -10px rgba(0,0,0,0.6)", "purpose": "Drop shadow under glass panes (dark)." },
+      { "name": "glass-hl-light", "value": "inset 0 1px 0 rgba(255,255,255,0.95), inset 0 0 0 1px rgba(255,255,255,0.35), inset 0 -14px 28px -16px rgba(255,255,255,0.6)", "purpose": "Inner specular highlight: top line, rim, bottom glow (light)." },
+      { "name": "glass-hl-dark", "value": "inset 0 1px 0 rgba(255,255,255,0.24), inset 0 0 0 1px rgba(255,255,255,0.04), inset 0 -14px 28px -18px rgba(255,255,255,0.1)", "purpose": "Inner specular highlight (dark)." },
+      { "name": "sheen", "value": "linear-gradient(128deg, rgba(255,255,255,var(--sheen)) 0%, transparent 34%, transparent 70%, rgba(255,255,255,calc(var(--sheen)*0.35)) 100%); --sheen 0.6 light, 0.14 dark", "purpose": "Diagonal light sweep on pane ::before." },
+      { "name": "blue-glow", "value": "0 10px 24px -6px rgba(10,116,255,0.6), 0 2px 4px rgba(10,60,160,0.25), inset 0 1.5px 0 rgba(255,255,255,0.55), inset 0 -8px 14px -8px rgba(0,40,140,0.45)", "purpose": "Glow and bevel on the add circle and primary actions." },
+      { "name": "backdrop-phone", "value": "blur(22px) saturate(1.7)", "purpose": "Pane backdrop below 900px." },
+      { "name": "backdrop-desktop", "value": "blur(30px) saturate(1.8)", "purpose": "Pane backdrop from 900px." },
+      { "name": "backdrop-sheet", "value": "blur(44px) saturate(1.9)", "purpose": "Bottom-sheet backdrop." }
+    ],
+    "motion": [
+      { "name": "ease-out", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Entrances (rise, grow, fade) and the ring sweep." },
+      { "name": "spring", "value": "linear(0, 0.009, 0.035 2.1%, 0.141 4.4%, 0.723 12.9%, 0.938 16.7%, 1.017 19.9%, 1.077 23.1%, 1.098 26.4%, 1.088 28.3%, 1.039 33.1%, 1.008 38%, 0.996 44%, 1)", "purpose": "Pops, presses, switch thumb, sheet entry; about 10% overshoot. Fallback cubic-bezier(0.34, 1.45, 0.64, 1)." },
+      { "name": "lens", "value": "cubic-bezier(0.34, 1.08, 0.5, 1)", "purpose": "Sliding glass lens in dock and segmented control; about 3% overshoot." },
+      { "name": "count-up", "value": "700ms, 1 - 2^(-10t)", "purpose": "Balance figure, first load per session only." },
+      { "name": "reduced-motion", "value": "durations 0.001ms, delays 0, iterations 1; Recharts isAnimationActive off; count-up skipped", "purpose": "prefers-reduced-motion handling." }
+    ],
+    "breakpoints": [
+      { "name": "ledger-reflow", "value": "599px" },
+      { "name": "desktop", "value": "900px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Glass Pane",
+      "kind": "card",
+      "refersTo": "glass-pane",
+      "description": "The base pane: blur, white edge, inner highlight, diagonal sheen.",
+      "html": "<div class=\"ds-pane\"><span class=\"ds-pane-title\">Tu saldo total</span><span class=\"ds-pane-fig\">$ 184.250</span></div>",
+      "css": ".ds-pane{position:relative;isolation:isolate;display:flex;flex-direction:column;gap:12px;padding:24px;border-radius:30px;border:1px solid var(--glass-border,rgba(255,255,255,.75));background:var(--glass-bg,rgba(255,255,255,.5));-webkit-backdrop-filter:blur(22px) saturate(1.7);backdrop-filter:blur(22px) saturate(1.7);box-shadow:var(--glass-shadow,0 12px 32px -8px rgba(40,60,140,.18)),var(--glass-hl,inset 0 1px 0 rgba(255,255,255,.95));color:var(--text,#15161a);font-family:-apple-system,BlinkMacSystemFont,'Hanken Grotesk',system-ui,sans-serif}.ds-pane::before{content:'';position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;background:linear-gradient(128deg,rgba(255,255,255,var(--sheen,.6)) 0%,rgba(255,255,255,0) 34%,rgba(255,255,255,0) 70%,rgba(255,255,255,calc(var(--sheen,.6)*.35)) 100%)}.ds-pane-title{font-size:15px;font-weight:600;color:var(--text-muted,#565b6e)}.ds-pane-fig{font-size:44px;font-weight:800;line-height:1;letter-spacing:-.035em;font-variant-numeric:tabular-nums}"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Blue glass pill, the only action fill.",
+      "html": "<button class=\"ds-btn-primary\">Guardar</button>",
+      "css": ".ds-btn-primary{display:flex;align-items:center;justify-content:center;width:100%;min-height:54px;padding:0 20px;border-radius:999px;border:1px solid rgba(255,255,255,.4);background:linear-gradient(160deg,#1470ee,#0a5fe0 62%);color:#fff;font:650 17px/1 -apple-system,BlinkMacSystemFont,'Hanken Grotesk',system-ui,sans-serif;letter-spacing:-.01em;cursor:pointer;box-shadow:0 12px 24px -8px rgba(10,116,255,.6),inset 0 1.5px 0 rgba(255,255,255,.5),inset 0 -8px 14px -8px rgba(0,40,140,.4);transition:transform .45s cubic-bezier(.34,1.45,.64,1),filter .2s ease}.ds-btn-primary:hover{filter:brightness(1.06)}.ds-btn-primary:active{transform:scale(.97)}.ds-btn-primary:focus-visible{outline:3px solid rgba(10,95,224,.55);outline-offset:2px}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Glass pill for secondary actions.",
+      "html": "<button class=\"ds-btn-secondary\">Cancelar</button>",
+      "css": ".ds-btn-secondary{display:flex;align-items:center;justify-content:center;width:100%;min-height:54px;padding:0 20px;border-radius:999px;border:1px solid var(--glass-border,rgba(255,255,255,.75));background:var(--glass-bg,rgba(255,255,255,.5));-webkit-backdrop-filter:blur(24px) saturate(1.6);backdrop-filter:blur(24px) saturate(1.6);color:var(--text,#15161a);font:650 17px/1 -apple-system,BlinkMacSystemFont,'Hanken Grotesk',system-ui,sans-serif;cursor:pointer;box-shadow:var(--glass-shadow,0 12px 32px -8px rgba(40,60,140,.18)),var(--glass-hl,inset 0 1px 0 rgba(255,255,255,.95));transition:transform .45s cubic-bezier(.34,1.45,.64,1)}.ds-btn-secondary:active{transform:scale(.97)}.ds-btn-secondary:focus-visible{outline:3px solid rgba(10,95,224,.55);outline-offset:2px}"
+    },
+    {
+      "name": "Field Input",
+      "kind": "input",
+      "refersTo": "field-input",
+      "description": "52px rounded field with a blue halo on focus.",
+      "html": "<input class=\"ds-field\" placeholder=\"Descripción\" />",
+      "css": ".ds-field{width:100%;min-height:52px;padding:12px 16px;border-radius:16px;border:1px solid var(--hair,rgba(50,62,110,.12));background:var(--field-bg,rgba(255,255,255,.55));color:var(--text,#15161a);font:500 17px -apple-system,BlinkMacSystemFont,'Hanken Grotesk',system-ui,sans-serif;box-shadow:inset 0 1px 2px rgba(20,30,70,.06);transition:border-color .2s ease,box-shadow .3s ease,background-color .2s ease}.ds-field::placeholder{color:var(--text-muted,#565b6e);opacity:1}.ds-field:focus{outline:none;border-color:#0a5fe0;background:var(--glass-bg-strong,rgba(255,255,255,.78));box-shadow:0 0 0 4px rgba(10,95,224,.22)}"
+    },
+    {
+      "name": "Floating Dock",
+      "kind": "nav",
+      "refersTo": "dock",
+      "description": "Glass pill tab bar with a sliding lens and a circular add button beside it.",
+      "html": "<div class=\"ds-dock-row\"><nav class=\"ds-dock\"><a class=\"active\">Inicio</a><a>Historial</a><a>Perfil</a></nav><button class=\"ds-add\" aria-label=\"Agregar\"><svg viewBox=\"0 0 24 24\" width=\"24\" height=\"24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\"><path d=\"M12 5v14M5 12h14\"/></svg></button></div>",
+      "css": ".ds-dock-row{display:flex;align-items:center;gap:12px}.ds-dock{--i:0;position:relative;isolation:isolate;flex:1;display:grid;grid-template-columns:repeat(3,1fr);height:64px;padding:6px;border-radius:999px;border:1px solid var(--glass-border,rgba(255,255,255,.75));background:var(--glass-bg,rgba(255,255,255,.5));-webkit-backdrop-filter:blur(22px) saturate(1.7);backdrop-filter:blur(22px) saturate(1.7);box-shadow:var(--glass-shadow,0 12px 32px -8px rgba(40,60,140,.18)),var(--glass-hl,inset 0 1px 0 rgba(255,255,255,.95))}.ds-dock::before{content:'';position:absolute;top:6px;bottom:6px;left:6px;width:calc((100% - 12px)/3);border-radius:999px;z-index:-1;background:linear-gradient(to bottom,var(--glass-bg-strong,rgba(255,255,255,.78)),var(--fill,rgba(110,118,150,.13)));box-shadow:0 2px 10px rgba(30,50,140,.16),inset 0 1px 0 rgba(255,255,255,.7),inset 0 0 0 1px var(--glass-border,rgba(255,255,255,.75));transform:translateX(calc(var(--i)*100%));transition:transform .6s cubic-bezier(.34,1.08,.5,1)}.ds-dock:has(a:nth-child(2).active){--i:1}.ds-dock:has(a:nth-child(3).active){--i:2}.ds-dock a{display:flex;align-items:center;justify-content:center;border-radius:999px;color:var(--text-muted,#565b6e);font:650 11.5px -apple-system,BlinkMacSystemFont,'Hanken Grotesk',system-ui,sans-serif;text-decoration:none;transition:color .3s ease}.ds-dock a.active{color:var(--accent,#0a63e8)}.ds-add{flex:none;width:56px;height:56px;border-radius:50%;border:1px solid rgba(255,255,255,.45);background:linear-gradient(160deg,#1470ee,#0a5fe0 60%);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 10px 24px -6px rgba(10,116,255,.6),0 2px 4px rgba(10,60,160,.25),inset 0 1.5px 0 rgba(255,255,255,.55),inset 0 -8px 14px -8px rgba(0,40,140,.45);transition:transform .45s cubic-bezier(.34,1.45,.64,1)}.ds-add:active{transform:scale(.9)}.ds-add:focus-visible{outline:3px solid rgba(10,95,224,.55);outline-offset:2px}"
+    },
+    {
+      "name": "Segmented Control",
+      "kind": "custom",
+      "refersTo": "chip",
+      "description": "Pill track with a glass lens that slides to the pressed segment.",
+      "html": "<div class=\"ds-seg\"><button aria-pressed=\"true\">Semana</button><button aria-pressed=\"false\">Mes</button></div>",
+      "css": ".ds-seg{--n:2;position:relative;isolation:isolate;display:flex;padding:3px;border-radius:999px;background:var(--fill,rgba(110,118,150,.13));box-shadow:inset 0 1px 2px rgba(20,30,70,.1),inset 0 0 0 1px var(--hair,rgba(50,62,110,.12))}.ds-seg::before{content:'';position:absolute;top:3px;bottom:3px;left:3px;width:calc((100% - 6px)/var(--n));border-radius:999px;z-index:-1;background:var(--glass-bg-strong,rgba(255,255,255,.78));box-shadow:0 2px 8px rgba(30,50,140,.18),inset 0 1px 0 rgba(255,255,255,.8),inset 0 0 0 1px var(--glass-border,rgba(255,255,255,.75));transition:transform .55s cubic-bezier(.34,1.08,.5,1)}.ds-seg:has(> :nth-child(2)[aria-pressed='true'])::before{transform:translateX(100%)}.ds-seg button{flex:1;min-height:44px;padding:0 14px;border:none;border-radius:999px;background:transparent;color:var(--text-muted,#565b6e);font:650 14.5px -apple-system,BlinkMacSystemFont,'Hanken Grotesk',system-ui,sans-serif;cursor:pointer;transition:color .3s ease}.ds-seg button[aria-pressed='true']{color:var(--text,#15161a)}.ds-seg button:focus-visible{outline:3px solid rgba(10,95,224,.55);outline-offset:2px}"
+    },
+    {
+      "name": "Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "44px glass pill; selected turns blue.",
+      "html": "<button class=\"ds-chip\" aria-pressed=\"false\">comida</button> <button class=\"ds-chip\" aria-pressed=\"true\">salud</button>",
+      "css": ".ds-chip{min-height:44px;padding:0 18px;border-radius:999px;border:1px solid var(--glass-border,rgba(255,255,255,.75));background:var(--glass-bg-strong,rgba(255,255,255,.78));color:var(--text,#15161a);font:600 15.5px -apple-system,BlinkMacSystemFont,'Hanken Grotesk',system-ui,sans-serif;text-transform:capitalize;cursor:pointer;box-shadow:0 1px 2px rgba(30,50,140,.08),inset 0 1px 0 rgba(255,255,255,.6);transition:transform .45s cubic-bezier(.34,1.45,.64,1),background-color .25s ease,color .25s ease}.ds-chip:active{transform:scale(.94)}.ds-chip[aria-pressed='true']{background:linear-gradient(160deg,#1470ee,#0a5fe0);border-color:rgba(255,255,255,.4);color:#fff;box-shadow:0 8px 16px -6px rgba(10,116,255,.6),inset 0 1px 0 rgba(255,255,255,.45)}.ds-chip:focus-visible{outline:3px solid rgba(10,95,224,.55);outline-offset:2px}"
+    },
+    {
+      "name": "Ledger Row",
+      "kind": "custom",
+      "refersTo": "category-squircle",
+      "description": "Category squircle, label and date, tabular amount; hairline divider.",
+      "html": "<div class=\"ds-row\"><span class=\"ds-cat\" style=\"--c1:#FFA53D;--c2:#FF6B2C\"><svg viewBox=\"0 0 24 24\" width=\"21\" height=\"21\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4.5 3v5a2.5 2.5 0 0 0 5 0V3M7 10.5V21\"/><path d=\"M17 21V3c-2.3 1.2-3.5 3.8-3.5 7 0 1.8 1.2 3 3.5 3.2\"/></svg></span><div class=\"ds-text\"><span class=\"ds-label\">Almuerzo</span><span class=\"ds-date\">Mar 12 sep</span></div><span class=\"ds-amount\">-$ 8.400</span></div>",
+      "css": ".ds-row{display:grid;grid-template-columns:40px minmax(0,1fr) auto;align-items:center;column-gap:12px;padding:10px 0;color:var(--text,#15161a);font-family:-apple-system,BlinkMacSystemFont,'Hanken Grotesk',system-ui,sans-serif}.ds-cat{display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:13px;color:#fff;background:linear-gradient(155deg,var(--c1),var(--c2));box-shadow:0 5px 12px -4px var(--c2),inset 0 1px 0 rgba(255,255,255,.5)}.ds-text{display:flex;flex-direction:column;gap:1px}.ds-label{font-size:16.5px;font-weight:600;letter-spacing:-.015em}.ds-date{font-size:13.5px;color:var(--text-muted,#565b6e)}.ds-amount{font-size:16.5px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;white-space:nowrap}"
+    },
+    {
+      "name": "Category Row with Bar",
+      "kind": "custom",
+      "refersTo": "category-squircle",
+      "description": "Donut legend row: squircle, name, amount, gradient progress bar.",
+      "html": "<div class=\"ds-cat-row\" style=\"--c1:#5AC8FA;--c2:#0A84FF;--w:62%\"><span class=\"ds-cat\"></span><div class=\"ds-main\"><span class=\"ds-name\">transporte</span><div class=\"ds-bar\"><i></i></div></div><span class=\"ds-amt\">$ 21.000</span></div>",
+      "css": ".ds-cat-row{display:grid;grid-template-columns:40px minmax(0,1fr) auto;align-items:center;column-gap:12px;padding:10px 0;color:var(--text,#15161a);font-family:-apple-system,BlinkMacSystemFont,'Hanken Grotesk',system-ui,sans-serif}.ds-cat-row .ds-cat{width:40px;height:40px;border-radius:13px;background:linear-gradient(155deg,var(--c1),var(--c2));box-shadow:0 5px 12px -4px var(--c2),inset 0 1px 0 rgba(255,255,255,.5)}.ds-main{display:flex;flex-direction:column;gap:7px}.ds-name{font-size:16px;font-weight:600;letter-spacing:-.01em;text-transform:capitalize}.ds-bar{height:6px;border-radius:999px;background:var(--fill,rgba(110,118,150,.13));overflow:hidden}.ds-bar>i{display:block;height:100%;width:var(--w);border-radius:inherit;background:linear-gradient(90deg,var(--c1),var(--c2))}.ds-amt{font-size:16px;font-weight:650;letter-spacing:-.01em;font-variant-numeric:tabular-nums}"
+    },
+    {
+      "name": "Theme Switch",
+      "kind": "custom",
+      "refersTo": "chip",
+      "description": "iOS-style switch with a spring thumb; on state is warm gold.",
+      "html": "<button class=\"ds-switch\" role=\"switch\" aria-checked=\"true\"><span class=\"ds-thumb\"></span></button>",
+      "css": ".ds-switch{position:relative;width:62px;height:38px;padding:0;border-radius:999px;border:1px solid var(--hair,rgba(50,62,110,.12));background:var(--fill-2,rgba(110,118,150,.22));cursor:pointer;transition:background-color .4s ease}.ds-switch[aria-checked='true']{background:linear-gradient(160deg,#ffd466,#ffb020);border-color:rgba(255,255,255,.5)}.ds-thumb{position:absolute;top:3px;left:3px;width:30px;height:30px;border-radius:50%;background:#fff;box-shadow:0 3px 8px rgba(0,0,0,.25),0 1px 1px rgba(0,0,0,.2);transition:transform .6s cubic-bezier(.34,1.45,.64,1)}.ds-switch[aria-checked='true'] .ds-thumb{transform:translateX(24px)}.ds-switch:focus-visible{outline:3px solid rgba(10,95,224,.55);outline-offset:2px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Liquid Glass",
+    "overview": "Translucent, refractive panes float over a slowly drifting colour field, so the glass always has something to bend. The user pinned the direction as Apple-like crystal glass: modern, fluid, pleasing to look at. The balance is the hero pane; everything else is a quieter pane of the same material. The system is calm, soft and springy, built for one-handed phone use in Argentina (es-AR, ARS currency).\n\nDepth comes from the material, not from rules or opaque cards: backdrop blur and saturation, a white specular edge, an inner top highlight and a diagonal sheen. Colour has jobs. Blue is the single action colour, green means ingreso, red means gasto, and each category owns one hue shown on a glass squircle. Light and dark are both complete worlds, chosen by data-theme before first paint.\n\nThe user rejected the earlier Crouwel-grid world; flat opaque cards and hard rules are refused here.",
+    "keyCharacteristics": [
+      "Ambient colour field behind every screen; static on phones, drifting from 900px.",
+      "One glass recipe reused for panes, dock, bell, top bar and sheet.",
+      "Continuous large radii: 30px panes, pills, circles, squircle category icons.",
+      "System SF on Apple devices with Hanken Grotesk fallback; tabular figures; tight tracking on big numbers.",
+      "Springy motion with a distinct lens easing for sliding highlights.",
+      "Full light and dark parity, with solid fallbacks when backdrop-filter is missing."
+    ],
+    "rules": [
+      { "name": "The Semantic Colour Rule", "body": "Blue acts, green is ingreso, red is gasto, category hues identify categories. No colour is borrowed for decoration.", "section": "colors" },
+      { "name": "The Fill-vs-Text Rule", "body": "Bright *-fill values are for marks, gradients and charts; text uses the darker income, expense, accent values (lighter in dark mode) so it passes contrast on glass.", "section": "colors" },
+      { "name": "The Tabular Rule", "body": "Every currency or numeric figure carries font-variant-numeric: tabular-nums (.fig) so digits do not jitter during count-up.", "section": "typography" },
+      { "name": "The Tight Tracking Rule", "body": "The larger the type, the tighter the tracking (-0.01em at 16px, -0.04em at 34-40px). Labels at 11-14px stay at 0.", "section": "typography" },
+      { "name": "The One Recipe Rule", "body": "Panes, dock, bell, top bar and sheet share one glass recipe; only blur radius and fill strength vary by role.", "section": "elevation" },
+      { "name": "The Lit-From-Above Rule", "body": "Highlights sit on top and left edges (inner top line, upper-left sheen); shadows fall below, tinted blue-violet in light mode, never grey-black and never hard-offset.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do build every elevated surface from the glass recipe: blur + saturate, 1px glass-border, --glass-shadow, --glass-hl, and the sheen on panes.",
+      "Do give any new pane, dock or sheet a solid glass-bg-strong fallback in the @supports not (backdrop-filter) block.",
+      "Do use pill or circle shapes for anything tappable in a row, 30px for panes, 22px for insets.",
+      "Do use --spring for presses and pops, --lens only for travelling highlights, --ease-out for entrances.",
+      "Do keep blue the only action colour and let category hues live on squircles, donut slices and bars.",
+      "Do keep touch targets at 44px minimum and numbers tabular.",
+      "Do design light and dark together; add any new glass colour to both token sets.",
+      "Do honour reduced motion for any new CSS animation (the global rule covers it) and for any chart library animation (disable it explicitly)."
+    ],
+    "donts": [
+      "Don't use flat opaque cards, hard rules or dark outlines; separation is by glass edge and hairline only.",
+      "Don't colour gasto amounts red in the ledger; red is reserved for the balance pill, chart and errors.",
+      "Don't run the field drift or breathing orb on phones; they are desktop-only for performance.",
+      "Don't stack more glass blur than the recipe (nesting a blurred pane inside a blurred pane); insets use fill, not backdrop-filter.",
+      "Don't use the bright *-fill colours for body text.",
+      "Don't put the count-up on anything but the first balance load."
+    ]
+  }
+}

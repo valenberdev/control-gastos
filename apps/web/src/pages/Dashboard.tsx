@@ -108,10 +108,8 @@ export default function Dashboard() {
 
   if (error) {
     return (
-      <div style={{ padding: 24 }}>
-        <p style={{ color: "var(--expense)" }}>
-          No se pudo conectar con la API. Revisá que esté corriendo.
-        </p>
+      <div className="state-error">
+        <p>No se pudo conectar con la API. Revisá que esté corriendo.</p>
       </div>
     );
   }
@@ -132,13 +130,15 @@ export default function Dashboard() {
             />
           )}
         </div>
-        <div className="area-month">
-          <MonthSwitcher month={month} onChange={setMonth} />
-        </div>
-        <div className="area-donut">
-          {!loading && (
-            <CategoryDonut expenses={expenses} categories={categories} />
-          )}
+        <div className="col-side">
+          <div className="area-month">
+            <MonthSwitcher month={month} onChange={setMonth} />
+          </div>
+          <div className="area-donut">
+            {!loading && (
+              <CategoryDonut expenses={expenses} categories={categories} />
+            )}
+          </div>
         </div>
         <div className="area-list">
           {!loading && (

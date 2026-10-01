@@ -79,17 +79,15 @@ export default function Historial() {
 
   if (error) {
     return (
-      <div style={{ padding: 24 }}>
-        <p style={{ color: "var(--expense)" }}>
-          No se pudo conectar con la API. Revisá que esté corriendo.
-        </p>
+      <div className="state-error">
+        <p>No se pudo conectar con la API. Revisá que esté corriendo.</p>
       </div>
     );
   }
 
   return (
     <div className="page-container">
-      <h1 style={{ fontSize: 20 }}>Historial</h1>
+      <h1 className="page-title">Historial</h1>
       <MonthSwitcher month={month} onChange={setMonth} />
       {!loading && (
         <TransactionsList

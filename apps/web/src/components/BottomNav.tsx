@@ -1,5 +1,6 @@
 import { NavLink } from "react-router";
 import NotificationBell from "./NotificationBell";
+import AppMark from "./AppMark";
 
 const items = [
   { to: "/", label: "Inicio", icon: HomeIcon, end: true },
@@ -7,15 +8,16 @@ const items = [
   { to: "/perfil", label: "Perfil", icon: ProfileIcon, end: false },
 ];
 
-function HomeIcon({ color }: { color: string }) {
+function HomeIcon() {
   return (
     <svg
       className="nav-icon"
+      aria-hidden="true"
       width="28"
       height="28"
       viewBox="0 0 24 24"
       fill="none"
-      stroke={color}
+      stroke="currentColor"
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -26,15 +28,16 @@ function HomeIcon({ color }: { color: string }) {
   );
 }
 
-function HistoryIcon({ color }: { color: string }) {
+function HistoryIcon() {
   return (
     <svg
       className="nav-icon"
+      aria-hidden="true"
       width="28"
       height="28"
       viewBox="0 0 24 24"
       fill="none"
-      stroke={color}
+      stroke="currentColor"
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -45,15 +48,16 @@ function HistoryIcon({ color }: { color: string }) {
   );
 }
 
-function ProfileIcon({ color }: { color: string }) {
+function ProfileIcon() {
   return (
     <svg
       className="nav-icon"
+      aria-hidden="true"
       width="28"
       height="28"
       viewBox="0 0 24 24"
       fill="none"
-      stroke={color}
+      stroke="currentColor"
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -67,28 +71,23 @@ function ProfileIcon({ color }: { color: string }) {
 export default function BottomNav() {
   return (
     <>
+      <header className="brand-bar">
+        <span className="brand-mark">
+          <AppMark className="app-mark" />
+          Gastos
+        </span>
+      </header>
       <nav className="bottom-nav">
         {items.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
             to={to}
             end={end}
-            style={{ textDecoration: "none" }}
           >
-            {({ isActive }) => {
-              const color = isActive ? "var(--accent)" : "var(--text-muted)";
-              return (
-                <div className="nav-item">
-                  <Icon color={color} />
-                  <span
-                    className="nav-label"
-                    style={{ color, fontWeight: isActive ? 700 : 500 }}
-                  >
-                    {label}
-                  </span>
-                </div>
-              );
-            }}
+            <div className="nav-item">
+              <Icon />
+              <span className="nav-label">{label}</span>
+            </div>
           </NavLink>
         ))}
       </nav>

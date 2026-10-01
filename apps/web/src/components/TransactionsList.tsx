@@ -1,5 +1,5 @@
-import type { CSSProperties } from "react";
 import type { Expense, Income, Category } from "../types";
+import CategoryIcon from "./CategoryIcon";
 
 export interface EditableTransaction {
   id: string;
@@ -20,6 +20,7 @@ interface TransactionsListProps {
 }
 
 interface Transaction extends EditableTransaction {
+  iconName: string;
   label: string;
   date: string;
   created_at: string;
@@ -100,6 +101,7 @@ export default function TransactionsList({
       amount: e.amount,
       description: e.description,
       categoryId: e.category_id,
+      iconName: nameById.get(e.category_id) ?? "otros",
       label:
         e.description || capitalize(nameById.get(e.category_id) ?? "Otros"),
       date: e.expense_date,
@@ -110,6 +112,7 @@ export default function TransactionsList({
       type: "income" as const,
       amount: i.amount,
       description: i.description,
+      iconName: "ingreso",
       label: i.description || "Ingreso",
       date: i.income_date,
       created_at: i.created_at,
@@ -120,68 +123,41 @@ export default function TransactionsList({
 
   if (transactions.length === 0) {
     return (
-      <div
-        className="card"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: 120,
-        }}
-      >
-        <span style={{ color: "var(--text-muted)", fontSize: 13 }}>
-          Todavía no hay movimientos.
-        </span>
+      <div className="card card-empty" style={{ minHeight: 120 }}>
+        <span>Todavía no hay movimientos.</span>
       </div>
     );
   }
 
   return (
-    <div
-      className="card"
-      style={{ display: "flex", flexDirection: "column", gap: 4 }}
-    >
-      <span style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>
-        Últimos movimientos
-      </span>
-      {transactions.map((t, idx) => (
+    <div className="card">
+      <span className="mod-title ledger-title">Últimos movimientos</span>
+      {transactions.map((t) => (
         <div
           key={`${t.type}-${t.id}`}
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            padding: "10px 0",
-            borderBottom:
-              idx === transactions.length - 1
-                ? "none"
-                : "1px solid var(--border)",
-          }}
+          className={editable ? "ledger-row is-editable" : "ledger-row"}
         >
-          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <span style={{ fontSize: 14 }}>{t.label}</span>
-            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
+          <CategoryIcon name={t.iconName} small />
+          <div className="ledger-text">
+            <span className="ledger-label">{t.label}</span>
+            <span className="ledger-date">
               {dateFormatter.format(parseDateOnly(t.date))}
             </span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div className="ledger-end">
             <span
-              style={{
-                fontSize: 14,
-                fontWeight: 700,
-                color: t.type === "income" ? "var(--income)" : "var(--expense)",
-              }}
+              className={`ledger-amount fig ${t.type === "income" ? "is-income" : "is-expense"}`}
             >
               {t.type === "income" ? "+" : "-"}
               {formatter.format(t.amount)}
             </span>
             {editable && (
-              <>
+              <div className="ledger-actions">
                 <button
                   type="button"
                   onClick={() => onEdit?.(t)}
                   aria-label="Editar"
-                  style={actionButtonStyle}
+                  className="icon-button"
                 >
                   <PencilIcon />
                 </button>
@@ -189,11 +165,11 @@ export default function TransactionsList({
                   type="button"
                   onClick={() => onDelete?.(t)}
                   aria-label="Borrar"
-                  style={actionButtonStyle}
+                  className="icon-button"
                 >
                   <TrashIcon />
                 </button>
-              </>
+              </div>
             )}
           </div>
         </div>
@@ -201,12 +177,3 @@ export default function TransactionsList({
     </div>
   );
 }
-
-const actionButtonStyle: CSSProperties = {
-  border: "none",
-  background: "none",
-  padding: 4,
-  display: "flex",
-  color: "var(--text-muted)",
-  cursor: "pointer",
-};

@@ -1,21 +1,15 @@
 import { useMemo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import type { Expense, Category } from '../types';
+import CategoryIcon, { CATEGORY_COLORS, categoryVars } from './CategoryIcon';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 
 interface CategoryDonutProps {
   expenses: Expense[];
   categories: Category[];
 }
 
-const PALETTE: Record<string, string> = {
-  comida: '#F45B69',
-  transporte: '#FBBF24',
-  entretenimiento: '#A78BFA',
-  salud: '#38BDF8',
-  servicios: '#FB923C',
-  otros: '#6B7280',
-};
-const FALLBACK_COLOR = '#6B7280';
+const FALLBACK_COLOR = '#7A7F93';
 
 const formatter = new Intl.NumberFormat('es-AR', {
   style: 'currency',
@@ -24,6 +18,7 @@ const formatter = new Intl.NumberFormat('es-AR', {
 });
 
 export default function CategoryDonut({ expenses, categories }: CategoryDonutProps) {
+  const reduceMotion = useReducedMotion();
   const data = useMemo(() => {
     const nameById = new Map(categories.map((c) => [c.id, c.name]));
     const totals = new Map<string, number>();
@@ -34,7 +29,7 @@ export default function CategoryDonut({ expenses, categories }: CategoryDonutPro
     }
 
     return Array.from(totals.entries())
-      .map(([name, value]) => ({ name, value, color: PALETTE[name] ?? FALLBACK_COLOR }))
+      .map(([name, value]) => ({ name, value, color: CATEGORY_COLORS[name] ?? FALLBACK_COLOR }))
       .sort((a, b) => b.value - a.value);
   }, [expenses, categories]);
 
@@ -42,50 +37,54 @@ export default function CategoryDonut({ expenses, categories }: CategoryDonutPro
 
   if (data.length === 0) {
     return (
-      <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 180 }}>
-        <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>Todavía no hay gastos este mes.</span>
+      <div className="card card-empty" style={{ minHeight: 180 }}>
+        <span>Todavía no hay gastos este mes.</span>
       </div>
     );
   }
 
   return (
-    <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={{ position: 'relative' }}>
-        <ResponsiveContainer width="100%" height={160}>
+    <div className="card">
+      <div className="donut-wrap">
+        <ResponsiveContainer width="100%" height="100%">
           <PieChart>
-            <Pie data={data} dataKey="value" innerRadius={55} outerRadius={75} paddingAngle={2} stroke="none">
+            <Pie
+              data={data}
+              dataKey="value"
+              innerRadius={62}
+              outerRadius={84}
+              paddingAngle={data.length > 1 ? 5 : 0}
+              cornerRadius={9}
+              stroke="none"
+              startAngle={90}
+              endAngle={-270}
+              isAnimationActive={!reduceMotion}
+              animationDuration={1100}
+              animationEasing="ease-out"
+            >
               {data.map((entry) => (
                 <Cell key={entry.name} fill={entry.color} />
               ))}
             </Pie>
           </PieChart>
         </ResponsiveContainer>
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            pointerEvents: 'none',
-          }}
-        >
-          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Total gastado</span>
-          <span style={{ fontSize: 18, fontWeight: 800 }}>{formatter.format(total)}</span>
+        <div className="donut-center">
+          <span className="mod-meta">Total gastado</span>
+          <span className="fig">{formatter.format(total)}</span>
         </div>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {data.map((entry) => (
-          <div key={entry.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: entry.color }} />
-              <span style={{ fontSize: 13, textTransform: 'capitalize' }}>{entry.name}</span>
+      {data.map((entry) => (
+        <div key={entry.name} className="cat-row" style={categoryVars(entry.name)}>
+          <CategoryIcon name={entry.name} />
+          <div className="cat-main">
+            <span className="cat-name">{entry.name}</span>
+            <div className="cat-bar">
+              <i style={{ '--w': `${Math.max(3, (entry.value / total) * 100)}%` } as React.CSSProperties} />
             </div>
-            <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{formatter.format(entry.value)}</span>
           </div>
-        ))}
-      </div>
+          <span className="cat-amount fig">{formatter.format(entry.value)}</span>
+        </div>
+      ))}
     </div>
   );
 }

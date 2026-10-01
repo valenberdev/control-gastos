@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>Control de Gastos</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5B9BFF"/>
+      <stop offset="0.55" stop-color="#4A52EA"/>
+      <stop offset="1" stop-color="#7B3FDA"/>
+    </linearGradient>
+    <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.42"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect id="ground" width="512" height="512" fill="url(#bg)"/>
+  <path id="gloss-shape" d="M0 0H512V236C400 192 112 192 0 236Z" fill="url(#gloss)"/>
+  <g id="ring" transform="rotate(-90 256 256)" fill="none" stroke-width="56" stroke-linecap="round">
+    <circle id="track" cx="256" cy="256" r="120" stroke="#FFFFFF" stroke-opacity="0.18"/>
+    <circle id="arc1" cx="256" cy="256" r="120" stroke="#7CF2A8" stroke-dasharray="230 524" stroke-dashoffset="0"/>
+    <circle id="arc2" cx="256" cy="256" r="120" stroke="#FFD866" stroke-dasharray="180 574" stroke-dashoffset="-304"/>
+    <circle id="arc3" cx="256" cy="256" r="120" stroke="#FF8FB3" stroke-dasharray="122 632" stroke-dashoffset="-558"/>
+  </g>
+</svg>

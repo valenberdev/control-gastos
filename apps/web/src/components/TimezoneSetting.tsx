@@ -46,17 +46,15 @@ export default function TimezoneSetting() {
   }
 
   return (
-    <div
-      className="card"
-      style={{ display: "flex", flexDirection: "column", gap: 10 }}
-    >
-      <span style={{ fontSize: 15 }}>Zona horaria</span>
+    <div className="card stack">
+      <span className="mod-title">Zona horaria</span>
 
       <select
         value={timezone ?? ""}
         disabled={timezone === null || saving}
         onChange={(e) => save(e.target.value)}
-        style={selectStyle}
+        aria-label="Zona horaria"
+        className="field-input field-select"
       >
         {timezone === null && <option value="">Cargando...</option>}
         {options.map((tz) => (
@@ -70,41 +68,18 @@ export default function TimezoneSetting() {
         <button
           onClick={() => save(deviceTimezone)}
           disabled={saving}
-          style={linkButtonStyle}
+          className="link-button"
         >
           Usar la de este dispositivo ({deviceTimezone.replace(/_/g, " ")})
         </button>
       )}
 
-      <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
+      <span className="mod-meta">
         Define qué día es "hoy" al cargar movimientos. Los ya cargados no
         cambian.
       </span>
 
-      {error && (
-        <span style={{ fontSize: 13, color: "var(--expense)" }}>{error}</span>
-      )}
+      {error && <span className="form-error">{error}</span>}
     </div>
   );
 }
-
-const selectStyle: React.CSSProperties = {
-  background: "var(--bg)",
-  border: "1px solid var(--border)",
-  borderRadius: 10,
-  padding: "10px 12px",
-  color: "var(--text)",
-  fontSize: 14,
-  fontFamily: "inherit",
-};
-
-const linkButtonStyle: React.CSSProperties = {
-  background: "none",
-  border: "none",
-  padding: 0,
-  textAlign: "left",
-  fontSize: 13,
-  fontFamily: "inherit",
-  color: "var(--accent)",
-  cursor: "pointer",
-};

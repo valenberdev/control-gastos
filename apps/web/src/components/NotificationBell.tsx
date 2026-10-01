@@ -6,7 +6,6 @@ export default function NotificationBell() {
   if (status === "unsupported") return null;
 
   const active = status === "subscribed";
-  const color = active ? "var(--accent)" : "var(--text-muted)";
 
   return (
     <button
@@ -15,14 +14,14 @@ export default function NotificationBell() {
       aria-label={
         active ? "Desactivar notificaciones" : "Activar notificaciones"
       }
-      className="bell-button"
+      className={active ? "bell-button is-active" : "bell-button"}
     >
       <svg
         width="20"
         height="20"
         viewBox="0 0 24 24"
         fill="none"
-        stroke={color}
+        stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"

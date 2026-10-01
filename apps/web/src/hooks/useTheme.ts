@@ -4,8 +4,8 @@ export type Theme = "light" | "dark";
 
 const STORAGE_KEY = "theme";
 const THEME_COLORS: Record<Theme, string> = {
-  dark: "#0B0B10",
-  light: "#F4F3F0",
+  dark: "#05070F",
+  light: "#E9EDF7",
 };
 
 function currentTheme(): Theme {

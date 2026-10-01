@@ -47,72 +47,43 @@ export default function Profile() {
 
   return (
     <div className="page-container">
-      <h1 style={{ fontSize: 20 }}>Perfil</h1>
+      <h1 className="page-title">Perfil</h1>
 
-      <div
-        className="card"
-        style={{ display: "flex", flexDirection: "column", gap: 8 }}
-      >
-        <span style={{ fontSize: 13, color: "var(--text-muted)" }}>Cuenta</span>
-        <span style={{ fontSize: 15 }}>{user?.email}</span>
+      <div className="card stack-sm">
+        <span className="mod-title">Cuenta</span>
+        <span className="account-email">{user?.email}</span>
       </div>
 
-      <div
-        className="card"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <span style={{ fontSize: 15 }}>Tema claro</span>
+      <div className="card row-between">
+        <span className="mod-title">Tema claro</span>
         <ThemeToggle />
       </div>
 
       <TimezoneSetting />
 
-      <div
-        className="card"
-        style={{ display: "flex", flexDirection: "column", gap: 12 }}
-      >
-        <span style={{ fontSize: 15, fontWeight: 700 }}>Vincular Telegram</span>
-        <span style={{ fontSize: 13, color: "var(--text-muted)" }}>
+      <div className="card stack">
+        <span className="mod-title">Vincular Telegram</span>
+        <span className="mod-meta">
           Generá un código y mandaselo al bot con <code>/vincular</code>.
         </span>
 
         {linkCode && !expired && (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 4,
-              padding: "12px 0",
-            }}
-          >
-            <span style={{ fontSize: 32, fontWeight: 800, letterSpacing: 4 }}>
-              {linkCode.code}
-            </span>
-            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
+          <div className="link-code">
+            <span className="fig">{linkCode.code}</span>
+            <span className="mod-meta">
               Expira en {Math.floor(secondsLeft / 60)}:
               {String(secondsLeft % 60).padStart(2, "0")}
             </span>
           </div>
         )}
 
-        {expired && (
-          <span style={{ fontSize: 13, color: "var(--expense)" }}>
-            El código expiró.
-          </span>
-        )}
-        {error && (
-          <span style={{ fontSize: 13, color: "var(--expense)" }}>{error}</span>
-        )}
+        {expired && <span className="form-error">El código expiró.</span>}
+        {error && <span className="form-error">{error}</span>}
 
         <button
           onClick={handleGenerate}
           disabled={generating}
-          style={buttonStyle}
+          className="btn-primary"
         >
           {generating
             ? "Generando..."
@@ -122,28 +93,9 @@ export default function Profile() {
         </button>
       </div>
 
-      <button
-        onClick={logout}
-        style={{
-          ...buttonStyle,
-          background: "transparent",
-          border: "1px solid var(--border)",
-          color: "var(--text)",
-        }}
-      >
+      <button onClick={logout} className="btn-secondary">
         Cerrar sesión
       </button>
     </div>
   );
 }
-
-const buttonStyle: React.CSSProperties = {
-  border: "none",
-  borderRadius: 10,
-  padding: "12px",
-  fontSize: 14,
-  fontWeight: 700,
-  cursor: "pointer",
-  background: "var(--accent)",
-  color: "#fff",
-};

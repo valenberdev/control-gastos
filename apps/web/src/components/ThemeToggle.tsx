@@ -45,34 +45,9 @@ export default function ThemeToggle() {
       role="switch"
       aria-checked={isLight}
       aria-label={isLight ? "Cambiar a tema oscuro" : "Cambiar a tema claro"}
-      style={{
-        position: "relative",
-        width: 52,
-        height: 30,
-        borderRadius: 15,
-        border: "1px solid var(--border)",
-        background: "var(--bg)",
-        cursor: "pointer",
-        padding: 0,
-        flexShrink: 0,
-      }}
+      className="theme-switch"
     >
-      <span
-        style={{
-          position: "absolute",
-          top: 2,
-          left: 2,
-          width: 24,
-          height: 24,
-          borderRadius: "50%",
-          background: "var(--accent)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          transform: isLight ? "translateX(22px)" : "translateX(0)",
-          transition: "transform 0.2s ease",
-        }}
-      >
+      <span className="theme-switch-thumb">
         {isLight ? <SunIcon /> : <MoonIcon />}
       </span>
     </button>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../context/AuthContext";
 import AuthTabs from "../components/AuthTabs";
+import AppMark from "../components/AppMark";
 import { ApiError } from "../api/client";
 
 export default function Login() {
@@ -31,44 +32,17 @@ export default function Login() {
   }
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 16,
-      }}
-    >
-      <form
-        onSubmit={handleSubmit}
-        className="card"
-        style={{
-          width: "100%",
-          maxWidth: 360,
-          display: "flex",
-          flexDirection: "column",
-          gap: 16,
-        }}
-      >
+    <div className="auth-page">
+      <form onSubmit={handleSubmit} className="card auth-card">
+        <AppMark className="auth-logo" />
         <AuthTabs />
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <h1 style={{ fontSize: 22 }}>Bienvenido de nuevo</h1>
-          <span style={{ fontSize: 13, color: "var(--text-muted)" }}>
-            Ingresá con tu email y contraseña.
-          </span>
+        <div className="auth-head">
+          <h1>Bienvenido de nuevo</h1>
+          <span>Ingresá con tu email y contraseña.</span>
         </div>
 
-        <label
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 6,
-            fontSize: 13,
-            color: "var(--text-muted)",
-          }}
-        >
+        <label className="field">
           Email
           <input
             type="email"
@@ -76,19 +50,11 @@ export default function Login() {
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            style={inputStyle}
+            className="field-input"
           />
         </label>
 
-        <label
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 6,
-            fontSize: 13,
-            color: "var(--text-muted)",
-          }}
-        >
+        <label className="field">
           Contraseña
           <input
             type="password"
@@ -96,39 +62,16 @@ export default function Login() {
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            style={inputStyle}
+            className="field-input"
           />
         </label>
 
-        {error && (
-          <span style={{ color: "var(--expense)", fontSize: 13 }}>{error}</span>
-        )}
+        {error && <span className="form-error">{error}</span>}
 
-        <button type="submit" disabled={submitting} style={buttonStyle}>
+        <button type="submit" disabled={submitting} className="btn-primary">
           {submitting ? "Ingresando..." : "Ingresar"}
         </button>
       </form>
     </div>
   );
 }
-
-const inputStyle: React.CSSProperties = {
-  background: "var(--bg)",
-  border: "1px solid var(--border)",
-  borderRadius: 10,
-  padding: "10px 12px",
-  color: "var(--text)",
-  fontSize: 14,
-  fontFamily: "inherit",
-};
-
-const buttonStyle: React.CSSProperties = {
-  background: "var(--accent)",
-  color: "#fff",
-  border: "none",
-  borderRadius: 10,
-  padding: "12px",
-  fontSize: 14,
-  fontWeight: 700,
-  cursor: "pointer",
-};

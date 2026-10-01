@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import type { CSSProperties } from "react";
 
 interface MonthSwitcherProps {
   month: string; // 'YYYY-MM'
@@ -41,49 +40,40 @@ export default function MonthSwitcher({ month, onChange }: MonthSwitcherProps) {
   const isCurrentMonth = month === currentMonth();
 
   return (
-    <div
-      className="card"
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "14px 16px",
-      }}
-    >
+    <div className="card month-switcher">
       <button
         onClick={() => onChange(shiftMonth(month, -1))}
         aria-label="Mes anterior"
-        style={arrowStyle}
+        className="month-arrow"
       >
-        ‹
+        <ChevronIcon direction="left" />
       </button>
-      <span style={{ fontSize: 14, fontWeight: 700 }}>{label}</span>
+      <span className="month-label">{label}</span>
       <button
         onClick={() => onChange(shiftMonth(month, 1))}
         disabled={isCurrentMonth}
         aria-label="Mes siguiente"
-        style={{
-          ...arrowStyle,
-          opacity: isCurrentMonth ? 0.3 : 1,
-          cursor: isCurrentMonth ? "default" : "pointer",
-        }}
+        className="month-arrow"
       >
-        ›
+        <ChevronIcon direction="right" />
       </button>
     </div>
   );
 }
 
-const arrowStyle: CSSProperties = {
-  background: "var(--bg)",
-  border: "1px solid var(--border)",
-  color: "var(--text)",
-  width: 32,
-  height: 32,
-  borderRadius: "50%",
-  fontSize: 18,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  cursor: "pointer",
-};
+function ChevronIcon({ direction }: { direction: "left" | "right" }) {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      <path d={direction === "left" ? "M15 5l-7 7 7 7" : "M9 5l7 7-7 7"} />
+    </svg>
+  );
+}

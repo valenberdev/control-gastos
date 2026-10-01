@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { CSSProperties, FormEvent } from "react";
+import type { FormEvent } from "react";
 import { post, patch } from "../api/client";
 import type { Category } from "../types";
 import type { EditableTransaction } from "./TransactionsList";
@@ -132,31 +132,17 @@ export default function AddMovementModal({
         if (e.target === dialogRef.current) onClose();
       }}
     >
-      <form
-        onSubmit={handleSubmit}
-        noValidate
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 16,
-          padding: 20,
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <h2 id="movement-title" style={{ fontSize: 18 }}>
+      <form onSubmit={handleSubmit} noValidate className="movement-form">
+        <div className="movement-head">
+          <h2 id="movement-title">
             {editing ? "Editar movimiento" : "Agregar movimiento"}
           </h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Cerrar"
-            style={closeButtonStyle}
+            className="icon-button"
+            style={{ border: "1px solid var(--frame)" }}
           >
             <svg
               width="16"
@@ -175,7 +161,7 @@ export default function AddMovementModal({
         <div
           role="group"
           aria-label="Tipo de movimiento"
-          style={segmentedStyle}
+          className="segmented"
         >
           {TYPE_OPTIONS.map(({ value, label }) => {
             const active = value === type;
@@ -190,19 +176,7 @@ export default function AddMovementModal({
                   setType(value);
                   setError(null);
                 }}
-                style={{
-                  flex: 1,
-                  border: "none",
-                  borderRadius: 8,
-                  padding: "8px 0",
-                  fontSize: 14,
-                  fontWeight: 700,
-                  fontFamily: "inherit",
-                  cursor: editing ? "default" : "pointer",
-                  opacity: editing && !active ? 0.4 : 1,
-                  background: active ? "var(--accent)" : "transparent",
-                  color: active ? "#fff" : "var(--text-muted)",
-                }}
+                style={{ opacity: editing && !active ? 0.4 : 1 }}
               >
                 {label}
               </button>
@@ -210,28 +184,27 @@ export default function AddMovementModal({
           })}
         </div>
 
-        <label style={labelStyle}>
+        <label className="field">
           Monto
           <input
             ref={amountRef}
-            className="field-input"
+            className="field-input amount-input"
             type="text"
             inputMode="decimal"
             autoComplete="off"
             placeholder="0"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            style={{ fontSize: 28, fontWeight: 800 }}
           />
         </label>
 
         {type === "expense" && (
-          <div style={labelStyle}>
+          <div className="field">
             Categoría
             {categories.length === 0 ? (
               <span style={{ fontSize: 13 }}>Cargando categorías...</span>
             ) : (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              <div className="chip-group">
                 {categories.map((c) => (
                   <button
                     key={c.id}
@@ -248,7 +221,7 @@ export default function AddMovementModal({
           </div>
         )}
 
-        <label style={labelStyle}>
+        <label className="field">
           Descripción (opcional)
           <input
             className="field-input"
@@ -262,7 +235,7 @@ export default function AddMovementModal({
         </label>
 
         {error && (
-          <span role="alert" style={{ color: "var(--expense)", fontSize: 13 }}>
+          <span role="alert" className="form-error">
             {error}
           </span>
         )}
@@ -280,34 +253,3 @@ export default function AddMovementModal({
     </dialog>
   );
 }
-
-const labelStyle: CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  gap: 6,
-  fontSize: 13,
-  color: "var(--text-muted)",
-};
-
-const segmentedStyle: CSSProperties = {
-  display: "flex",
-  background: "var(--bg)",
-  border: "1px solid var(--border)",
-  borderRadius: 10,
-  padding: 2,
-  gap: 2,
-};
-
-const closeButtonStyle: CSSProperties = {
-  width: 32,
-  height: 32,
-  borderRadius: "50%",
-  border: "1px solid var(--border)",
-  background: "var(--bg)",
-  color: "var(--text-muted)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  cursor: "pointer",
-  padding: 0,
-};

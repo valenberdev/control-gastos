@@ -1,5 +1,13 @@
-import { LineChart, Line, XAxis, ResponsiveContainer, Tooltip } from "recharts";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+} from "recharts";
 import type { TrendPoint, TrendPeriod } from "../types";
+import { useReducedMotion } from "../hooks/useReducedMotion";
 
 interface TrendChartProps {
   data: TrendPoint[];
@@ -23,9 +31,9 @@ const MONTH_LABELS = [
   "Dic",
 ];
 
-const INCOME_COLOR = "#34D399";
-const EXPENSE_COLOR = "#F45B69";
-const MUTED_COLOR = "#8A8A94";
+const INCOME_COLOR = "var(--income-fill)";
+const EXPENSE_COLOR = "var(--expense-fill)";
+const MUTED_COLOR = "var(--text-muted)";
 
 const PERIOD_OPTIONS: { value: TrendPeriod; label: string }[] = [
   { value: "day", label: "Día" },
@@ -53,40 +61,23 @@ export default function TrendChart({
   selectedPeriod,
   onPeriodChange,
 }: TrendChartProps) {
+  const reduceMotion = useReducedMotion();
   const chartData = data.map((point) => ({
     ...point,
     ...describeBucket(point.bucket, dataPeriod),
   }));
 
   return (
-    <div
-      className="card"
-      style={{ display: "flex", flexDirection: "column", gap: 12 }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: 8,
-        }}
-      >
-        <div style={{ display: "flex", gap: 16 }}>
-          <Legend color={INCOME_COLOR} label="Ingresos" />
-          <Legend color={EXPENSE_COLOR} label="Gastos" />
+    <div className="card">
+      <div className="trend-head">
+        <div className="legend">
+          <Legend kind="income" label="Ingresos" />
+          <Legend kind="expense" label="Gastos" />
         </div>
         <div
           role="group"
           aria-label="Período del gráfico"
-          style={{
-            display: "flex",
-            background: "var(--bg)",
-            border: "1px solid var(--border)",
-            borderRadius: 10,
-            padding: 2,
-            gap: 2,
-          }}
+          className="segmented"
         >
           {PERIOD_OPTIONS.map(({ value, label }) => {
             const active = value === selectedPeriod;
@@ -95,17 +86,6 @@ export default function TrendChart({
                 key={value}
                 onClick={() => onPeriodChange(value)}
                 aria-pressed={active}
-                style={{
-                  border: "none",
-                  borderRadius: 8,
-                  padding: "4px 10px",
-                  fontSize: 12,
-                  fontWeight: 700,
-                  fontFamily: "inherit",
-                  cursor: "pointer",
-                  background: active ? "var(--accent)" : "transparent",
-                  color: active ? "#fff" : "var(--text-muted)",
-                }}
               >
                 {label}
               </button>
@@ -113,60 +93,93 @@ export default function TrendChart({
           })}
         </div>
       </div>
-      <ResponsiveContainer width="100%" height={140}>
-        <LineChart
+      <ResponsiveContainer width="100%" height={180}>
+        <AreaChart
           data={chartData}
-          margin={{ top: 4, right: 4, bottom: 0, left: 4 }}
+          margin={{ top: 10, right: 6, bottom: 0, left: 6 }}
         >
+          <defs>
+            <linearGradient id="fill-income" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" style={{ stopColor: "var(--income-fill)" }} stopOpacity={0.38} />
+              <stop offset="100%" style={{ stopColor: "var(--income-fill)" }} stopOpacity={0} />
+            </linearGradient>
+            <linearGradient id="fill-expense" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" style={{ stopColor: "var(--expense-fill)" }} stopOpacity={0.32} />
+              <stop offset="100%" style={{ stopColor: "var(--expense-fill)" }} stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid
+            stroke="var(--hair)"
+            strokeDasharray="3 6"
+            vertical={false}
+          />
           <XAxis
             dataKey="label"
             axisLine={false}
             tickLine={false}
             interval="preserveStartEnd"
             minTickGap={8}
-            tick={{ fill: MUTED_COLOR, fontSize: 12 }}
+            tickMargin={10}
+            tick={{ fill: MUTED_COLOR, fontSize: 12.5 }}
           />
           <Tooltip
+            cursor={{ stroke: "var(--hair)", strokeWidth: 2 }}
             contentStyle={{
-              background: "var(--surface)",
-              border: "1px solid var(--border)",
-              borderRadius: 12,
-              fontSize: 12,
+              background: "var(--glass-bg-strong)",
+              border: "1px solid var(--glass-border)",
+              borderRadius: 16,
+              fontSize: 13,
+              fontFamily: "var(--font)",
+              boxShadow: "var(--glass-shadow)",
+              backdropFilter: "blur(20px)",
             }}
-            labelStyle={{ color: "var(--text)" }}
+            labelStyle={{ color: "var(--text)", fontWeight: 700 }}
             labelFormatter={(_label, payload) =>
               payload?.[0]?.payload?.tooltip ?? ""
             }
           />
-          <Line
+          <Area
             type="monotone"
             dataKey="income"
             name="Ingresos"
             stroke={INCOME_COLOR}
-            strokeWidth={2}
+            strokeWidth={3}
+            strokeLinecap="round"
+            fill="url(#fill-income)"
             dot={false}
+            activeDot={{ r: 5, stroke: "#fff", strokeWidth: 2.5 }}
+            isAnimationActive={!reduceMotion}
+            animationDuration={1200}
+            animationEasing="ease-out"
           />
-          <Line
+          <Area
             type="monotone"
             dataKey="expenses"
             name="Gastos"
             stroke={EXPENSE_COLOR}
-            strokeWidth={2}
+            strokeWidth={3}
+            strokeLinecap="round"
+            fill="url(#fill-expense)"
             dot={false}
+            activeDot={{ r: 5, stroke: "#fff", strokeWidth: 2.5 }}
+            isAnimationActive={!reduceMotion}
+            animationDuration={1200}
+            animationEasing="ease-out"
           />
-        </LineChart>
+        </AreaChart>
       </ResponsiveContainer>
     </div>
   );
 }
 
-function Legend({ color, label }: { color: string; label: string }) {
+function Legend({ kind, label }: { kind: "income" | "expense"; label: string }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+    <div className="legend-item">
       <span
-        style={{ width: 8, height: 8, borderRadius: "50%", background: color }}
+        className={kind === "income" ? "mark-income" : "mark-expense"}
+        aria-hidden="true"
       />
-      <span style={{ fontSize: 13, color: "var(--text-muted)" }}>{label}</span>
+      <span>{label}</span>
     </div>
   );
 }
