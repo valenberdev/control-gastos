@@ -53,14 +53,6 @@ async function ensureCategories(token: string): Promise<void> {
   categoryIds = Object.fromEntries(categories.map((c) => [c.name, c.id]));
 }
 
-function matchCategory(text: string): string | null {
-  const words = text.toLowerCase().split(/\s+/);
-  for (const [category, synonyms] of Object.entries(CATEGORY_SYNONYMS)) {
-    if (synonyms.some((syn) => words.includes(syn))) return category;
-  }
-  return null;
-}
-
 async function linkTelegram(code: string, chatId: string): Promise<boolean> {
   const res = await fetch(`${API_URL}/auth/link-telegram`, {
     method: "POST",
