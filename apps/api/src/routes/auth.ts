@@ -7,12 +7,16 @@ import { requireAuth } from "../middleware/requireAuth.js";
 import { requireInternalKey } from "../middleware/requireInternalKey.js";
 import { APP_TIMEZONE } from "../config/timezone.js";
 import {
-  loginAccountLimiter,
-  loginIpLimiter,
+  forgotPasswordEmailLimiter,
+  forgotPasswordIpLimiter,
   linkCodeLimiter,
   linkTelegramLimiter,
+  loginAccountLimiter,
+  loginIpLimiter,
   registerLimiter,
+  resetPasswordLimiter,
 } from "../middleware/rateLimit.js";
+import { passwordResetEmail, sendEmail } from "../services/email.js";
 
 export const authRouter = Router();
 
@@ -242,5 +246,113 @@ authRouter.patch("/timezone", requireAuth, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Error al actualizar la zona horaria" });
+  }
+});
+
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
+
+function hashToken(token: string): string {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+async function sendPasswordReset(email: string): Promise<void> {
+  const result = await pool.query("SELECT id FROM users WHERE email = $1", [
+    email,
+  ]);
+  const user = result.rows[0];
+  if (!user) return;
+
+  const token = crypto.randomBytes(32).toString("base64url");
+  const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS);
+
+  await pool.query(
+    "DELETE FROM password_resets WHERE user_id = $1 OR expires_at < now()",
+    [user.id],
+  );
+  await pool.query(
+    "INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES ($1, $2, $3)",
+    [user.id, hashToken(token), expiresAt],
+  );
+
+  const frontendUrl = (
+    process.env.FRONTEND_URL || "http://localhost:5173"
+  ).replace(/\/+$/, "");
+  const link = `${frontendUrl}/restablecer#token=${token}`;
+
+  if (process.env.NODE_ENV !== "production" && !process.env.RESEND_API_KEY) {
+    console.log(`[DEV] Link de recuperación para ${email}: ${link}`);
+    return;
+  }
+
+  await sendEmail({ to: email, ...passwordResetEmail(link) });
+}
+
+authRouter.post(
+  "/forgot-password",
+  forgotPasswordIpLimiter,
+  forgotPasswordEmailLimiter,
+  (req, res) => {
+    const email = normalizeEmail(req.body.email);
+
+    res.json({
+      message:
+        "Si existe una cuenta con ese email, te mandamos un link para restablecer la contraseña.",
+    });
+
+    if (!email) return;
+    sendPasswordReset(email).catch((err) =>
+      console.error("Error en la recuperación de contraseña:", err),
+    );
+  },
+);
+
+authRouter.post("/reset-password", resetPasswordLimiter, async (req, res) => {
+  const { token, password } = req.body;
+
+  if (
+    typeof token !== "string" ||
+    token.length < 20 ||
+    token.length > 200 ||
+    typeof password !== "string" ||
+    password.length < 8
+  ) {
+    res.status(400).json({ error: "Datos inválidos" });
+    return;
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const used = await client.query(
+      "DELETE FROM password_resets WHERE token_hash = $1 AND expires_at > now() RETURNING user_id",
+      [hashToken(token)],
+    );
+    const row = used.rows[0];
+    if (!row) {
+      await client.query("ROLLBACK");
+      res
+        .status(400)
+        .json({ error: "El link no es válido o ya venció. Pedí uno nuevo." });
+      return;
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    await client.query("UPDATE users SET password_hash = $1 WHERE id = $2", [
+      passwordHash,
+      row.user_id,
+    ]);
+    await client.query("DELETE FROM password_resets WHERE user_id = $1", [
+      row.user_id,
+    ]);
+    await client.query("COMMIT");
+
+    res.json({ success: true });
+  } catch (err) {
+    await client.query("ROLLBACK").catch(() => {});
+    console.error(err);
+    res.status(500).json({ error: "Error al restablecer la contraseña" });
+  } finally {
+    client.release();
   }
 });

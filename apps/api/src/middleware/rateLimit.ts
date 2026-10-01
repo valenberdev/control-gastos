@@ -60,3 +60,23 @@ export const linkTelegramLimiter = rateLimit({
     return typeof chatId === "string" ? chatId.slice(0, 64) : "sin-chat";
   },
 });
+
+export const forgotPasswordIpLimiter = rateLimit({
+  ...base,
+  windowMs: 60 * MINUTE,
+  limit: 5,
+});
+
+export const forgotPasswordEmailLimiter = rateLimit({
+  ...base,
+  windowMs: 60 * MINUTE,
+  limit: 3,
+  keyGenerator: (req) => normalizedEmail(req) || clientIp(req),
+});
+
+export const resetPasswordLimiter = rateLimit({
+  ...base,
+  windowMs: 15 * MINUTE,
+  limit: 10,
+  skipSuccessfulRequests: true,
+});
