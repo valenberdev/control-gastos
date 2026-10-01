@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { useAuth } from "../context/AuthContext";
 import AuthTabs from "../components/AuthTabs";
 import AppMark from "../components/AppMark";
+import PasswordField from "../components/PasswordField";
 import { ApiError } from "../api/client";
 
 export default function Login() {
@@ -54,17 +55,13 @@ export default function Login() {
           />
         </label>
 
-        <label className="field">
-          Contraseña
-          <input
-            type="password"
-            required
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="field-input"
-          />
-        </label>
+        <PasswordField
+          label="Contraseña"
+          required
+          autoComplete="current-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
 
         {error && <span className="form-error">{error}</span>}
 
