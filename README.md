@@ -19,18 +19,19 @@ Aplicación web instalable (PWA) para registrar gastos e ingresos personales, ta
 >
 > **Recuperación de contraseña.** El servicio de mails (Resend) está en modo de prueba: sin un dominio propio verificado, solo entrega a la dirección de la cuenta de Resend. Hoy el mail de recuperación no le llega a cualquier persona.
 
-<!--
 ## Capturas
 
-Descomentar esta sección cuando estén las imágenes en docs/screenshots/.
+Capturas de la app con datos de ejemplo.
 
-![Inicio en tema claro](docs/screenshots/inicio-claro.png)
-![Inicio en tema oscuro](docs/screenshots/inicio-oscuro.png)
-![Historial](docs/screenshots/historial.png)
-![Agregar movimiento](docs/screenshots/agregar-movimiento.png)
-![Perfil y vínculo con Telegram](docs/screenshots/perfil-telegram.png)
-![Conversación con el bot](docs/screenshots/bot-telegram.png)
--->
+<p align="center">
+  <img src="docs/screenshots/inicio-claro.jpg" alt="Inicio en tema claro: saldo, tendencia y gasto por categoría" width="260">
+  <img src="docs/screenshots/inicio-oscuro.jpg" alt="Inicio en tema oscuro" width="260">
+</p>
+<p align="center">
+  <img src="docs/screenshots/historial.jpg" alt="Historial de un mes, con editar y borrar" width="200">
+  <img src="docs/screenshots/agregar-movimiento.jpg" alt="Hoja para agregar un movimiento" width="200">
+  <img src="docs/screenshots/perfil-telegram.jpg" alt="Perfil con un código para vincular Telegram" width="200">
+</p>
 
 ## Qué hace
 
@@ -106,6 +107,7 @@ flowchart LR
 Lo que está implementado:
 
 - Contraseñas con `bcryptjs` (costo 10), mínimo de 8 caracteres. El login compara contra un hash ficticio cuando el email no existe y responde igual, para no filtrar qué cuentas hay.
+- Validación de entrada en la API: montos positivos con hasta 2 decimales y un máximo, descripciones de hasta 200 caracteres (el bot recorta las más largas), meses con formato `AAAA-MM` e ids con formato UUID.
 - Sesiones con JWT de 7 días. Todas las consultas de datos filtran por el `user_id` del token (un `userId` en el cuerpo se ignora) y hay tests de aislamiento entre usuarios.
 - Límites de intentos (`express-rate-limit`, en memoria):
 
@@ -138,12 +140,12 @@ Lo que **no** está: encabezados de seguridad (por ejemplo `helmet`), revocació
 |---|---|
 | `api` | `npm ci`, `npm run build` y `npm test` con un servicio PostgreSQL 16 |
 | `bot` | `npm ci`, `npm run build` y `npm test` |
-| `web` | `npm ci`, `npm run typecheck` y `npm run build` |
+| `web` | `npm ci`, `npm run typecheck` (incluye el service worker) y `npm run build` |
 | `docker` | Construye las imágenes de producción de la API y del bot, sin publicarlas |
 
 ## Correrlo en local
 
-**Requisitos:** Docker con Compose y Node 24 (para el frontend y para ejecutar los tests fuera de Docker).
+**Requisitos:** Docker con Compose y Node 24, que es la versión que usan los Dockerfiles y el CI (hay un `.nvmrc`). Node se necesita para el frontend y para ejecutar los tests fuera de Docker.
 
 ```bash
 # 1. Variables de entorno
@@ -216,6 +218,7 @@ db/
   migrations/ Scripts para bases creadas antes de cada cambio
 docs/         Guía de despliegue
 .github/workflows/ci.yml
+.nvmrc                Versión de Node (24)
 docker-compose.yml    Entorno local: db, api y bot
 PRODUCT.md, DESIGN.md Documentos de producto y de diseño del frontend
 ```
