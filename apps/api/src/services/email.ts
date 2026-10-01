@@ -54,12 +54,12 @@ export function passwordResetEmail(link: string) {
     "Si no lo pediste vos, ignorá este mensaje: tu contraseña sigue siendo la misma.",
   ].join("\n");
 
-  const html = `<div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#14141A">
+  const html = `<div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#15161A">
   <h2 style="margin:0 0 12px">Restablecé tu contraseña</h2>
   <p>Recibimos un pedido para restablecer la contraseña de tu cuenta de Control de Gastos.</p>
-  <p><a href="${link}" style="display:inline-block;background:#5B4FE9;color:#fff;text-decoration:none;padding:12px 20px;border-radius:10px;font-weight:700">Elegir una contraseña nueva</a></p>
-  <p style="font-size:13px;color:#6B6B75">El link vale por 1 hora y se puede usar una sola vez. Si no lo pediste vos, ignorá este mensaje: tu contraseña sigue siendo la misma.</p>
-  <p style="font-size:12px;color:#6B6B75;word-break:break-all">Si el botón no funciona, copiá este link en el navegador:<br>${link}</p>
+  <p><a href="${link}" style="display:inline-block;background:#0A5FE0;color:#fff;text-decoration:none;padding:12px 20px;border-radius:999px;font-weight:700">Elegir una contraseña nueva</a></p>
+  <p style="font-size:13px;color:#565B6E">El link vale por 1 hora y se puede usar una sola vez. Si no lo pediste vos, ignorá este mensaje: tu contraseña sigue siendo la misma.</p>
+  <p style="font-size:12px;color:#565B6E;word-break:break-all">Si el botón no funciona, copiá este link en el navegador:<br>${link}</p>
 </div>`;
 
   return { subject, html, text };
