@@ -1,8 +1,22 @@
 import webpush from "web-push";
 import { pool } from "../db/pool.js";
 
+// El asunto VAPID identifica a quien envía los push y tiene que ser una URL
+// https: o mailto:. Se configura con VAPID_SUBJECT; si falta, se usa el
+// frontend cuando es https, y en desarrollo un placeholder (web-push rechaza
+// http://localhost).
+function vapidSubject(): string {
+  const explicit = process.env.VAPID_SUBJECT;
+  if (explicit) return explicit;
+
+  const frontend = process.env.FRONTEND_URL;
+  if (frontend?.startsWith("https://")) return frontend;
+
+  return "mailto:dev@example.com";
+}
+
 webpush.setVapidDetails(
-  "mailto:vaberdini@gmail.com",
+  vapidSubject(),
   process.env.VAPID_PUBLIC_KEY!,
   process.env.VAPID_PRIVATE_KEY!,
 );
