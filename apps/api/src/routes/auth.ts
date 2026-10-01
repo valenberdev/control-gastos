@@ -19,6 +19,14 @@ export const authRouter = Router();
 const DUMMY_HASH =
   "$2a$10$CwTycUXWue0Thq9StjUM0uJ8B0FMSUKUOJEOmMz+Bp9UPvcVzAoUq";
 
+function normalizeEmail(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const email = value.trim().toLowerCase();
+  return email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    ? email
+    : null;
+}
+
 async function resolveTimezone(candidate: unknown): Promise<string> {
   if (typeof candidate === "string") {
     const found = await pool.query(
@@ -31,13 +39,10 @@ async function resolveTimezone(candidate: unknown): Promise<string> {
 }
 
 authRouter.post("/register", registerLimiter, async (req, res) => {
-  const { email, password, timezone } = req.body;
+  const email = normalizeEmail(req.body.email);
+  const { password, timezone } = req.body;
 
-  if (
-    typeof email !== "string" ||
-    typeof password !== "string" ||
-    password.length < 8
-  ) {
+  if (!email || typeof password !== "string" || password.length < 8) {
     res.status(400).json({
       error: "Email inválido o contraseña muy corta (mínimo 8 caracteres)",
     });
@@ -73,9 +78,10 @@ authRouter.post(
   loginIpLimiter,
   loginAccountLimiter,
   async (req, res) => {
-    const { email, password } = req.body;
+    const email = normalizeEmail(req.body.email);
+    const { password } = req.body;
 
-    if (typeof email !== "string" || typeof password !== "string") {
+    if (!email || typeof password !== "string") {
       res.status(400).json({ error: "Datos inválidos" });
       return;
     }
