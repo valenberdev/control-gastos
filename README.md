@@ -6,18 +6,25 @@ Aplicación web instalable (PWA) para registrar gastos e ingresos personales, ta
 
 **Demo:** https://control-gastos-roan-eight.vercel.app · **Bot:** [@control_gastos_valen_bot](https://t.me/control_gastos_valen_bot) · **Despliegue:** [docs/deployment.md](docs/deployment.md)
 
+## En 2 minutos
+
+- **Qué es:** una API REST (Express y PostgreSQL), un bot de Telegram que usa esa misma API y una PWA en React, desplegados en planes gratuitos.
+- **Qué mirar:** la [arquitectura](#arquitectura), las [decisiones técnicas](#decisiones-técnicas-y-trade-offs) y los [tests de integración](#tests-y-ci).
+
 ## Probar la demo
 
 1. Abre la demo y crea una cuenta con un email y una contraseña de al menos 8 caracteres. No se pide confirmar el email.
 2. Toca el botón **+**, elige gasto o ingreso y carga un movimiento.
 3. En **Inicio** mira el saldo, la tendencia (por día, semana o mes) y el gasto por categoría. En **Historial** puedes cambiar de mes, editar y borrar.
 4. Instala la app: en Chrome o Edge desde el botón de instalar; en iPhone, desde Safari con *Compartir > Agregar a pantalla de inicio*.
-5. Con la app instalada, activa las notificaciones con la campana y crea un movimiento: llega un aviso push. En iPhone las notificaciones solo funcionan con la PWA instalada.
+5. Activa las notificaciones con la campana y crea un movimiento: llega un aviso push. En iPhone esto solo funciona con la PWA instalada (paso anterior).
 6. En **Perfil**, genera un código de vínculo y mándalo al bot con `/vincular 123456` (con tu código). Después escribe `500 comida` o `+50000 sueldo`.
 
 > **Primera carga lenta.** La API y el bot corren en el plan gratuito de Render, que duerme el servicio tras 15 minutos sin tráfico: el primer pedido puede tardar cerca de un minuto.
 >
 > **Recuperación de contraseña.** El servicio de mails (Resend) está en modo de prueba: sin un dominio propio verificado, solo entrega a la dirección de la cuenta de Resend. Hoy el mail de recuperación no le llega a cualquier persona.
+>
+> **Es una demo.** Usa una contraseña que no uses en otros sitios: no se verifica el email y los datos pueden borrarse en cualquier momento.
 
 ## Capturas
 
@@ -88,8 +95,8 @@ flowchart LR
 - **PWA en lugar de app nativa.** Se instala en iPhone sin cuenta de Apple Developer. Costo: sin datos offline y, en iOS, las notificaciones push exigen la PWA instalada y HTTPS.
 - **Telegram en lugar de WhatsApp para cargar gastos por chat.** Descarté WhatsApp por la fricción de su API para uso personal.
 - **El saldo no se guarda, se calcula en SQL con `NUMERIC(12,2)`.** Evita errores de coma flotante y un contador que se desincronice. Antes se restaba en JavaScript (corregido en `c2733a8`). Costo: una suma por consulta, apoyada en el índice por usuario y fecha.
-- **Fechas como `DATE`, sin hora.** La fecha de cada movimiento se calcula en SQL con la zona horaria del usuario y la API devuelve los `DATE` como texto `AAAA-MM-DD` (`db/pool.ts`) para evitar corrimientos de día al serializar.
-- **Filtro por mes con rango de fechas** en lugar de `date_trunc`, para que use el índice `(user_id, fecha)`.
+- **Fechas como `DATE`, sin hora.** La fecha de cada movimiento se calcula en SQL con la zona horaria del usuario y la API devuelve los `DATE` como texto `AAAA-MM-DD` (`apps/api/src/db/pool.ts`) para evitar corrimientos de día al serializar.
+- **Filtro por mes con rango de fechas** en lugar de `date_trunc`, para que Postgres pueda usar el índice `(user_id, fecha)`: aplicarle una función a la columna lo impide.
 - **Autenticación propia con `bcryptjs` y JWT.** `bcryptjs` es JavaScript puro: no necesita compilar módulos nativos en la imagen Alpine (costo: es más lento que `bcrypt`). El JWT (7 días) vive en `localStorage` y no en una cookie `httpOnly` porque frontend y API están en dominios distintos. Costo: un XSS podría leerlo y la sesión no se revoca.
 - **Recuperación de contraseña sin filtrar qué cuentas existen.** Token aleatorio de un solo uso (solo se guarda su hash), vence a la hora, el link lleva el token después del `#` (el navegador no lo envía al servidor) y la respuesta es idéntica exista o no la cuenta.
 - **Bot autenticado con clave interna.** El bot se identifica ante la API con `x-internal-key` y obtiene un JWT por cada chat vinculado. El vínculo es un código de 6 dígitos de un solo uso. Descarta los `update_id` repetidos porque Telegram reenvía si la API tarda por un *cold start*.
@@ -97,7 +104,7 @@ flowchart LR
 - **Session pooler de Supabase.** La conexión directa es solo IPv6 y Render no soporta IPv6 saliente.
 - **Mails por la API HTTPS de Resend.** El plan gratuito de Render bloquea el tráfico saliente a los puertos SMTP.
 - **La app de Express está separada del arranque** (`app.ts` e `index.ts`) para poder probarla con supertest sin abrir un puerto.
-- **Tests de integración contra Postgres real**, no contra mocks de la base, para que cubran las consultas SQL (fechas, zonas horarias, atomicidad). Los tests encontraron tres bugs reales:
+- **Tests de integración contra Postgres real**, no contra mocks de la base, para que cubran las consultas SQL (fechas, zonas horarias, atomicidad). Al diseñar los casos de prueba aparecieron bugs reales, que se corrigieron antes de escribir los tests que los cubren. Algunos ejemplos:
   - Un monto escrito `1.500` se registraba como 1,5 (`8d8a978`).
   - Un `month` con formato inválido llegaba a la consulta y terminaba en un error 500; hoy responde 400 (`9b5a8aa`).
   - El canje del código de Telegram hacía un `SELECT` y después un `DELETE` por separado: dos pedidos simultáneos con el mismo código podían pasar los dos. Hoy es un `DELETE ... RETURNING` dentro de una transacción (`acbbe12`).
@@ -124,6 +131,7 @@ Lo que está implementado:
 - Webhook de Telegram validado con token secreto.
 - Consultas parametrizadas; el link de recuperación se arma con `FRONTEND_URL`, no con el encabezado `Host` del pedido.
 - CORS limitado a un único origen (`FRONTEND_URL`). Conexión a la base cifrada con TLS en producción (`DATABASE_SSL`).
+- La Data API automática de Supabase está desactivada: la única puerta a los datos es la API propia, con su autenticación y sus límites.
 - Los `.env` están en `.gitignore`; las claves viven solo en las variables de entorno de cada servicio.
 
 Lo que **no** está: encabezados de seguridad (por ejemplo `helmet`), revocación de sesiones, doble factor de autenticación. Ver [Limitaciones](#limitaciones-conocidas-y-próximos-pasos).
@@ -157,7 +165,9 @@ cd apps/api && npm ci && npx web-push generate-vapid-keys && cd ../..
 docker compose up --build
 ```
 
-El compose levanta tres servicios: `db` (PostgreSQL 16, expuesto en `127.0.0.1:5433`; carga `db/init.sql` solo la primera vez que se crea el volumen), `api` (puerto 3000, con recarga en caliente) y `bot` (en modo *polling*). Para el bot usa el token de un bot de desarrollo creado con @BotFather, distinto del de producción. Sin `RESEND_API_KEY`, el link de recuperación de contraseña se imprime en el log de la API.
+El compose levanta tres servicios: `db` (PostgreSQL 16, expuesto en `127.0.0.1:5433`; carga `db/init.sql` solo la primera vez que se crea el volumen), `api` (puerto 3000, con `tsx watch`) y `bot` (en modo *polling*). Para el bot usa el token de un bot de desarrollo creado con @BotFather, distinto del de producción. Sin `RESEND_API_KEY`, el link de recuperación de contraseña se imprime en el log de la API.
+
+> **Recarga en caliente en Windows.** En Docker Desktop para Windows, `tsx watch` puede no detectar los cambios de archivos montados desde el disco de Windows. Si un cambio en `api` o `bot` no se refleja, reinicia el servicio con `docker compose restart api`. Si cambias dependencias, usa `docker compose up --build -V` para renovar el volumen de `node_modules`.
 
 ```bash
 # 3. Frontend (otra terminal)
@@ -230,12 +240,14 @@ PRODUCT.md, DESIGN.md Documentos de producto y de diseño del frontend
 - Los tokens de sesión (7 días) no se revocan al cambiar la contraseña ni al cerrar sesión; cerrar sesión solo borra el token del navegador.
 - La conexión a la base va cifrada pero sin verificar el certificado del servidor (se puede activar con `DATABASE_CA_CERT`).
 - La recuperación de contraseña por email no llega a cualquier persona hasta verificar un dominio en Resend.
+- No hay verificación de email ni una forma de borrar la cuenta y sus datos.
+- No se configuraron respaldos propios de la base de datos.
 - No hay login con Google, presupuestos, gastos recurrentes ni exportación a CSV. La tabla `recurring_expenses` y la columna `monthly_budget` existen en el esquema, pero ninguna funcionalidad las usa.
 - Las categorías son fijas y compartidas por todas las cuentas, y la interfaz muestra los montos en pesos argentinos.
 - No hay tests del frontend ni de la entrega real de push, del webhook del bot o de Resend.
 - Las migraciones se aplican a mano y en orden; no hay una herramienta que registre cuáles se corrieron.
 
-Próximos pasos posibles: verificar un dominio en Resend, revocar sesiones al cambiar la contraseña, guardar los límites de intentos fuera de la memoria del proceso, agregar tests del frontend y encabezados de seguridad.
+Próximos pasos posibles: verificar un dominio en Resend, verificación de email y borrado de cuenta, revocar sesiones al cambiar la contraseña, guardar los límites de intentos fuera de la memoria del proceso, agregar tests del frontend y encabezados de seguridad.
 
 ## Autor
 
