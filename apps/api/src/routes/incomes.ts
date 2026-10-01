@@ -1,13 +1,23 @@
 import { Router } from "express";
 import { pool } from "../db/pool.js";
 import { notifyUser } from "../services/push.js";
-import { isUuid, isValidAmount } from "../lib/validation.js";
+import { isUuid, isValidAmount, isMonth } from "../lib/validation.js";
 
 export const incomesRouter = Router();
 
 incomesRouter.get("/", async (req, res) => {
   const { month } = req.query;
   const userId = req.userId!;
+
+  if (month !== undefined && !isMonth(month)) {
+    res
+      .status(400)
+      .json({
+        error:
+          "El mes tiene que tener el formato AAAA-MM (por ejemplo 2026-09).",
+      });
+    return;
+  }
 
   try {
     const result = month

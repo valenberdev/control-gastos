@@ -1,13 +1,20 @@
 import { Router } from "express";
 import { pool } from "../db/pool.js";
 import { notifyUser } from "../services/push.js";
-import { isUuid, isValidAmount } from "../lib/validation.js";
+import { isUuid, isValidAmount, isMonth } from "../lib/validation.js";
 
 export const expensesRouter = Router();
 
 expensesRouter.get("/", async (req, res) => {
   const { month } = req.query;
   const userId = req.userId!;
+
+  if (month !== undefined && !isMonth(month)) {
+    res.status(400).json({
+      error: "El mes tiene que tener el formato AAAA-MM (por ejemplo 2026-09).",
+    });
+    return;
+  }
 
   try {
     const result = month
@@ -66,6 +73,11 @@ expensesRouter.post("/", async (req, res) => {
       body: `$${expense.amount}${description ? ` — ${description}` : ""}`,
     }).catch((err) => console.error("Error al notificar:", err));
   } catch (err) {
+    const { code, constraint } = err as { code?: string; constraint?: string };
+    if (code === "23503" && constraint === "expenses_category_id_fkey") {
+      res.status(400).json({ error: "La categoría no existe" });
+      return;
+    }
     console.error(err);
     res.status(500).json({ error: "Error al crear el gasto" });
   }
