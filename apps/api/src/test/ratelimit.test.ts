@@ -8,6 +8,7 @@ import {
   it,
   vi,
 } from "vitest";
+import { pool } from "../db/pool.js";
 import { api, auth, closePool, createUser, resetDb } from "./helpers.js";
 
 const freshPools: Array<{ end: () => Promise<void> }> = [];
@@ -34,7 +35,43 @@ afterAll(closePool);
 const PASSWORD = "clave-segura-123";
 const WRONG = "incorrecta-123";
 
+// App detrás de un proxy (como en Render): la IP del cliente sale de X-Forwarded-For.
+async function freshApiBehindProxy() {
+  vi.resetModules();
+  const { app } = await import("../app.js");
+  const { pool } = await import("../db/pool.js");
+  freshPools.push(pool);
+  app.set("trust proxy", 1);
+  return request(app);
+}
+
 describe("login", () => {
+  it("bloquea una cuenta tras 50 intentos fallidos repartidos entre 50 IP distintas", async () => {
+    const ana = await createUser({ email: "ana@example.com", password: PASSWORD });
+    const fresh = await freshApiBehindProxy();
+    rateLimitsOn();
+
+    const statuses: number[] = [];
+    for (let i = 0; i < 51; i++) {
+      statuses.push(
+        (
+          await fresh
+            .post("/auth/login")
+            .set("X-Forwarded-For", `203.0.113.${i + 1}`)
+            .send({ email: ana.email, password: WRONG })
+        ).status,
+      );
+    }
+    const claveCorrecta = await fresh
+      .post("/auth/login")
+      .set("X-Forwarded-For", "198.51.100.77")
+      .send({ email: ana.email, password: PASSWORD });
+
+    expect(statuses.slice(0, 50).every((status) => status === 401)).toBe(true);
+    expect(statuses[50]).toBe(429);
+    expect(claveCorrecta.status).toBe(429);
+  }, 60_000);
+
   it("bloquea tras 5 intentos fallidos de la misma cuenta, aunque después la contraseña sea la correcta", async () => {
     const ana = await createUser({
       email: "ana@example.com",
@@ -318,4 +355,32 @@ describe("eliminar cuenta", () => {
     expect(statuses).toEqual([403, 403, 403, 403, 403, 429]);
     expect(conClaveCorrecta.status).toBe(429);
   });
+});
+
+describe("token del bot", () => {
+  it("un chat no puede pedir más de 30 tokens en 15 minutos, sin afectar a otro chat", async () => {
+    const ana = await createUser({ email: "ana@example.com", password: PASSWORD });
+    await pool.query(
+      "INSERT INTO telegram_links (chat_id, user_id) VALUES ('111111', $1), ('222222', $1)",
+      [ana.id],
+    );
+    const fresh = await freshApi();
+    rateLimitsOn();
+    const internal = { "x-internal-key": process.env.INTERNAL_API_KEY! };
+
+    const statuses: number[] = [];
+    for (let i = 0; i < 31; i++) {
+      statuses.push(
+        (await fresh.post("/auth/telegram-token").set(internal).send({ chatId: "111111" })).status,
+      );
+    }
+    const otroChat = await fresh
+      .post("/auth/telegram-token")
+      .set(internal)
+      .send({ chatId: "222222" });
+
+    expect(statuses.slice(0, 30).every((status) => status === 200)).toBe(true);
+    expect(statuses[30]).toBe(429);
+    expect(otroChat.status).toBe(200);
+  }, 30_000);
 });

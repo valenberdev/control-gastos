@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { pool } from "../db/pool.js";
 import { sendEmail } from "../services/email.js";
-import { api, closePool, createUser, resetDb } from "./helpers.js";
+import { api, auth, closePool, createUser, resetDb } from "./helpers.js";
 
 const sendEmailMock = vi.mocked(sendEmail);
 const PASSWORD = "clave-segura-123";
@@ -252,5 +252,62 @@ describe("POST /auth/reset-password", () => {
     expect((await login(email, perdedora)).status).toBe(401);
   });
 
-  it.todo("revoca las sesiones abiertas al cambiar la contraseña");
+  it("revoca las sesiones abiertas al cambiar la contraseña, y la nueva sesión sirve", async () => {
+    const user = await createUser({ email: "ana@example.com", password: PASSWORD });
+    await requestReset(user.email);
+    await waitForEmails(1);
+    const antes = await api.get("/auth/me").set(auth(user));
+
+    const res = await resetPassword(tokenFromEmail());
+    const despues = await api.get("/auth/me").set(auth(user));
+    const nueva = await login(user.email, NEW_PASSWORD);
+    const conLaNueva = await api
+      .get("/auth/me")
+      .set({ Authorization: `Bearer ${nueva.body.token}` });
+
+    expect(antes.status).toBe(200);
+    expect(res.status).toBe(200);
+    expect(despues.status).toBe(401);
+    expect(nueva.status).toBe(200);
+    expect(conLaNueva.status).toBe(200);
+  });
+
+  it("cierra también los chats de Telegram, las suscripciones push y los códigos de vínculo", async () => {
+    const user = await createUser({ email: "ana@example.com", password: PASSWORD });
+    const otra = await createUser({ email: "beto@example.com", password: PASSWORD });
+    await pool.query("INSERT INTO telegram_links (chat_id, user_id) VALUES ('111111', $1), ('222222', $2)", [user.id, otra.id]);
+    await pool.query(
+      "INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth) VALUES ($1, 'https://fcm.googleapis.com/a', 'k', 'a'), ($2, 'https://fcm.googleapis.com/b', 'k', 'a')",
+      [user.id, otra.id],
+    );
+    await pool.query(
+      "INSERT INTO link_codes (code, user_id, expires_at) VALUES ('123456', $1, now() + interval '5 minutes')",
+      [user.id],
+    );
+    await requestReset(user.email);
+    await waitForEmails(1);
+
+    await resetPassword(tokenFromEmail());
+
+    const chats = await pool.query("SELECT user_id FROM telegram_links");
+    const subs = await pool.query("SELECT user_id FROM push_subscriptions");
+    const codes = await pool.query("SELECT 1 FROM link_codes");
+    expect(chats.rows.map((r) => r.user_id)).toEqual([otra.id]);
+    expect(subs.rows.map((r) => r.user_id)).toEqual([otra.id]);
+    expect(codes.rowCount).toBe(0);
+  });
+
+  it.each([
+    ["demasiado larga", "ñ".repeat(37)],
+    ["de las más comunes", "12345678"],
+  ])("una contraseña %s no gasta el token", async (_caso, password) => {
+    const { email, token } = await userWithResetToken("ana@example.com");
+
+    const rechazada = await resetPassword(token, password);
+    const valida = await resetPassword(token);
+
+    expect(rechazada.status).toBe(400);
+    expect(valida.status).toBe(200);
+    expect((await login(email, NEW_PASSWORD)).status).toBe(200);
+  });
 });

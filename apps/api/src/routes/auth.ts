@@ -1,9 +1,15 @@
 import { Router } from "express";
+import type { PoolClient } from "pg";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { pool } from "../db/pool.js";
+import { logError } from "../lib/logger.js";
 import { signToken } from "../middleware/jwt.js";
-import { forgetUser, requireAuth } from "../middleware/requireAuth.js";
+import {
+  forgetChat,
+  forgetUser,
+  requireAuth,
+} from "../middleware/requireAuth.js";
 import { requireInternalKey } from "../middleware/requireInternalKey.js";
 import { APP_TIMEZONE } from "../config/timezone.js";
 import {
@@ -11,14 +17,21 @@ import {
   forgotPasswordIpLimiter,
   linkCodeLimiter,
   linkTelegramLimiter,
+  loginAccountGlobalLimiter,
   loginAccountLimiter,
   loginIpLimiter,
   registerLimiter,
   resetPasswordLimiter,
   deleteAccountLimiter,
+  telegramTokenChatLimiter,
+  telegramTokenIpLimiter,
 } from "../middleware/rateLimit.js";
 import { passwordResetEmail, sendEmail } from "../services/email.js";
-import { isChatId, isLinkCode } from "../lib/validation.js";
+import {
+  isChatId,
+  isLinkCode,
+  passwordProblem,
+} from "../lib/validation.js";
 
 export const authRouter = Router();
 
@@ -48,10 +61,14 @@ authRouter.post("/register", registerLimiter, async (req, res) => {
   const email = normalizeEmail(req.body.email);
   const { password, timezone } = req.body;
 
-  if (!email || typeof password !== "string" || password.length < 8) {
-    res.status(400).json({
-      error: "Email inválido o contraseña muy corta (mínimo 8 caracteres)",
-    });
+  if (!email) {
+    res.status(400).json({ error: "Email inválido" });
+    return;
+  }
+
+  const problem = passwordProblem(password);
+  if (problem) {
+    res.status(400).json({ error: problem });
     return;
   }
 
@@ -67,14 +84,14 @@ authRouter.post("/register", registerLimiter, async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 10);
     const userTimezone = await resolveTimezone(timezone);
     const result = await pool.query(
-      "INSERT INTO users (email, password_hash, timezone) VALUES ($1, $2, $3) RETURNING id, email, timezone",
+      "INSERT INTO users (email, password_hash, timezone) VALUES ($1, $2, $3) RETURNING id, email, timezone, token_version",
       [email, passwordHash, userTimezone],
     );
-    const user = result.rows[0];
-    const token = signToken({ userId: user.id });
+    const { token_version: version, ...user } = result.rows[0];
+    const token = signToken({ userId: user.id, v: version });
     res.status(201).json({ token, user });
   } catch (err) {
-    console.error(err);
+    logError(err);
     res.status(500).json({ error: "Error al registrar el usuario" });
   }
 });
@@ -83,6 +100,7 @@ authRouter.post(
   "/login",
   loginIpLimiter,
   loginAccountLimiter,
+  loginAccountGlobalLimiter,
   async (req, res) => {
     const email = normalizeEmail(req.body.email);
     const { password } = req.body;
@@ -94,7 +112,7 @@ authRouter.post(
 
     try {
       const result = await pool.query(
-        "SELECT id, email, password_hash FROM users WHERE email = $1",
+        "SELECT id, email, password_hash, token_version FROM users WHERE email = $1",
         [email],
       );
       const user = result.rows[0];
@@ -108,10 +126,10 @@ authRouter.post(
         return;
       }
 
-      const token = signToken({ userId: user.id });
+      const token = signToken({ userId: user.id, v: user.token_version });
       res.status(200).json({ token, user: { id: user.id, email: user.email } });
     } catch (err) {
-      console.error(err);
+      logError(err);
       res.status(500).json({ error: "Error al iniciar sesión" });
     }
   },
@@ -137,7 +155,7 @@ authRouter.post(
       );
       res.status(201).json({ code, expiresAt });
     } catch (err) {
-      console.error(err);
+      logError(err);
       res.status(500).json({ error: "Error al generar el código" });
     }
   },
@@ -155,8 +173,9 @@ authRouter.post(
       return;
     }
 
-    const client = await pool.connect();
+    let client: PoolClient | undefined;
     try {
+      client = await pool.connect();
       await client.query("BEGIN");
 
       const used = await client.query(
@@ -179,39 +198,98 @@ authRouter.post(
 
       res.status(200).json({ success: true });
     } catch (err) {
-      await client.query("ROLLBACK").catch(() => {});
-      console.error(err);
+      await client?.query("ROLLBACK").catch(() => {});
+      logError(err);
       res.status(500).json({ error: "Error al vincular la cuenta" });
     } finally {
-      client.release();
+      client?.release();
     }
   },
 );
 
-authRouter.post("/telegram-token", requireInternalKey, async (req, res) => {
-  const { chatId } = req.body;
+authRouter.post(
+  "/telegram-token",
+  requireInternalKey,
+  telegramTokenIpLimiter,
+  telegramTokenChatLimiter,
+  async (req, res) => {
+    const { chatId } = req.body;
+
+    if (!isChatId(chatId)) {
+      res.status(400).json({ error: "Datos inválidos" });
+      return;
+    }
+
+    try {
+      const result = await pool.query(
+        `SELECT l.user_id, u.token_version
+         FROM telegram_links l
+         JOIN users u ON u.id = l.user_id
+         WHERE l.chat_id = $1`,
+        [chatId],
+      );
+      const row = result.rows[0];
+      if (!row) {
+        res.status(404).json({ error: "Chat no vinculado" });
+        return;
+      }
+
+      // Token corto y atado al chat: deja de valer apenas se desvincula.
+      const token = signToken(
+        {
+          userId: row.user_id,
+          v: row.token_version,
+          via: "telegram",
+          chat: chatId,
+        },
+        "15m",
+      );
+      res.status(200).json({ token });
+    } catch (err) {
+      logError(err);
+      res.status(500).json({ error: "Error al generar el token" });
+    }
+  },
+);
+
+authRouter.get("/telegram", requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT chat_id, linked_at FROM telegram_links WHERE user_id = $1 ORDER BY linked_at DESC",
+      [req.userId!],
+    );
+    res.json(
+      result.rows.map((r) => ({ chatId: r.chat_id, linkedAt: r.linked_at })),
+    );
+  } catch (err) {
+    logError(err);
+    res.status(500).json({ error: "Error al obtener los chats vinculados" });
+  }
+});
+
+authRouter.delete("/telegram/:chatId", requireAuth, async (req, res) => {
+  const userId = req.userId!;
+  const { chatId } = req.params;
 
   if (!isChatId(chatId)) {
-    res.status(400).json({ error: "Datos inválidos" });
+    res.status(404).json({ error: "Chat no encontrado" });
     return;
   }
 
   try {
     const result = await pool.query(
-      "SELECT user_id FROM telegram_links WHERE chat_id = $1",
-      [chatId],
+      "DELETE FROM telegram_links WHERE chat_id = $1 AND user_id = $2",
+      [chatId, userId],
     );
-    const row = result.rows[0];
-    if (!row) {
-      res.status(404).json({ error: "Chat no vinculado" });
+    if (result.rowCount === 0) {
+      res.status(404).json({ error: "Chat no encontrado" });
       return;
     }
-
-    const token = signToken({ userId: row.user_id });
-    res.status(200).json({ token });
+    forgetChat(userId, chatId);
+    res.json({ success: true });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Error al generar el token" });
+    logError(err);
+    res.status(500).json({ error: "Error al desvincular el chat" });
   }
 });
 
@@ -228,7 +306,7 @@ authRouter.get("/me", requireAuth, async (req, res) => {
     }
     res.json(user);
   } catch (err) {
-    console.error(err);
+    logError(err);
     res.status(500).json({ error: "Error al obtener el usuario" });
   }
 });
@@ -257,7 +335,7 @@ authRouter.patch("/timezone", requireAuth, async (req, res) => {
     ]);
     res.json({ timezone: found.rows[0].name });
   } catch (err) {
-    console.error(err);
+    logError(err);
     res.status(500).json({ error: "Error al actualizar la zona horaria" });
   }
 });
@@ -315,7 +393,7 @@ authRouter.post(
 
     if (!email) return;
     sendPasswordReset(email).catch((err) =>
-      console.error("Error en la recuperación de contraseña:", err),
+      logError(err, "recuperación"),
     );
   },
 );
@@ -326,16 +404,21 @@ authRouter.post("/reset-password", resetPasswordLimiter, async (req, res) => {
   if (
     typeof token !== "string" ||
     token.length < 20 ||
-    token.length > 200 ||
-    typeof password !== "string" ||
-    password.length < 8
+    token.length > 200
   ) {
     res.status(400).json({ error: "Datos inválidos" });
     return;
   }
 
-  const client = await pool.connect();
+  const problem = passwordProblem(password);
+  if (problem) {
+    res.status(400).json({ error: problem });
+    return;
+  }
+
+  let client: PoolClient | undefined;
   try {
+    client = await pool.connect();
     await client.query("BEGIN");
 
     const used = await client.query(
@@ -351,23 +434,36 @@ authRouter.post("/reset-password", resetPasswordLimiter, async (req, res) => {
       return;
     }
 
+    // Cambiar la contraseña cierra todo lo que pudiera haber abierto otra
+    // persona: las sesiones (se sube la versión), los chats de Telegram
+    // vinculados, las suscripciones push y los códigos de vínculo pendientes.
     const passwordHash = await bcrypt.hash(password, 10);
-    await client.query("UPDATE users SET password_hash = $1 WHERE id = $2", [
-      passwordHash,
-      row.user_id,
-    ]);
+    await client.query(
+      "UPDATE users SET password_hash = $1, token_version = token_version + 1 WHERE id = $2",
+      [passwordHash, row.user_id],
+    );
     await client.query("DELETE FROM password_resets WHERE user_id = $1", [
       row.user_id,
     ]);
+    await client.query("DELETE FROM telegram_links WHERE user_id = $1", [
+      row.user_id,
+    ]);
+    await client.query("DELETE FROM push_subscriptions WHERE user_id = $1", [
+      row.user_id,
+    ]);
+    await client.query("DELETE FROM link_codes WHERE user_id = $1", [
+      row.user_id,
+    ]);
     await client.query("COMMIT");
+    forgetUser(row.user_id);
 
     res.json({ success: true });
   } catch (err) {
-    await client.query("ROLLBACK").catch(() => {});
-    console.error(err);
+    await client?.query("ROLLBACK").catch(() => {});
+    logError(err);
     res.status(500).json({ error: "Error al restablecer la contraseña" });
   } finally {
-    client.release();
+    client?.release();
   }
 });
 
@@ -401,7 +497,7 @@ authRouter.delete(
       forgetUser(userId);
       res.json({ success: true });
     } catch (err) {
-      console.error(err);
+      logError(err);
       res.status(500).json({ error: "Error al eliminar la cuenta" });
     }
   },

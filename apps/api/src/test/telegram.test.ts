@@ -1,3 +1,4 @@
+import jwt from "jsonwebtoken";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { pool } from "../db/pool.js";
 import {
@@ -287,5 +288,84 @@ describe("POST /auth/telegram-token", () => {
 
     expect(sinClave.status).toBe(401);
     expect(claveIncorrecta.status).toBe(401);
+  });
+});
+
+describe("token del bot", () => {
+  it("es corto (15 minutos), lleva el chat y la versión de sesión", async () => {
+    const user = await createUser({ email: "ana@example.com" });
+    await link(await generateCode(user), "123456789");
+
+    const res = await telegramToken("123456789");
+    const claims = jwt.decode(res.body.token) as Record<string, number | string>;
+
+    expect(claims.via).toBe("telegram");
+    expect(claims.chat).toBe("123456789");
+    expect(claims.v).toBe(0);
+    expect(Number(claims.exp) - Number(claims.iat)).toBe(15 * 60);
+  });
+});
+
+describe("GET /auth/telegram", () => {
+  it("exige iniciar sesión", async () => {
+    expect((await api.get("/auth/telegram")).status).toBe(401);
+  });
+
+  it("lista solo los chats de la cuenta", async () => {
+    const ana = await createUser({ email: "ana@example.com" });
+    const beto = await createUser({ email: "beto@example.com" });
+    await link(await generateCode(ana), "111111");
+    await link(await generateCode(ana), "222222");
+    await link(await generateCode(beto), "333333");
+
+    const res = await api.get("/auth/telegram").set(auth(ana));
+
+    expect(res.status).toBe(200);
+    expect(res.body.map((c: { chatId: string }) => c.chatId).sort()).toEqual([
+      "111111",
+      "222222",
+    ]);
+  });
+});
+
+describe("DELETE /auth/telegram/:chatId", () => {
+  it("desvincula el chat y el token que el bot ya tenía deja de valer", async () => {
+    const ana = await createUser({ email: "ana@example.com" });
+    await link(await generateCode(ana), "111111");
+    const bot = { Authorization: `Bearer ${(await telegramToken("111111")).body.token}` };
+    const antes = await api.get("/balance").set(bot);
+
+    const res = await api.delete("/auth/telegram/111111").set(auth(ana));
+    const despues = await api.get("/balance").set(bot);
+    const nuevoToken = await telegramToken("111111");
+
+    expect(antes.status).toBe(200);
+    expect(res.status).toBe(200);
+    expect(despues.status).toBe(401);
+    expect(nuevoToken.status).toBe(404);
+    expect(await links()).toEqual([]);
+  });
+
+  it("no toca los chats de otra cuenta", async () => {
+    const ana = await createUser({ email: "ana@example.com" });
+    const beto = await createUser({ email: "beto@example.com" });
+    await link(await generateCode(beto), "333333");
+
+    const res = await api.delete("/auth/telegram/333333").set(auth(ana));
+
+    expect(res.status).toBe(404);
+    expect(await links()).toEqual([{ chat_id: "333333", user_id: beto.id }]);
+  });
+
+  it("un chat con formato inválido da 404", async () => {
+    const ana = await createUser({ email: "ana@example.com" });
+
+    const res = await api.delete("/auth/telegram/no-es-un-chat").set(auth(ana));
+
+    expect(res.status).toBe(404);
+  });
+
+  it("exige iniciar sesión", async () => {
+    expect((await api.delete("/auth/telegram/111111")).status).toBe(401);
   });
 });
