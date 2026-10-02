@@ -1,10 +1,37 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
+import type { Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
-export default defineConfig({
+// Abre la conexión con la API (DNS + TCP + TLS) mientras el navegador todavía baja el
+// JavaScript. Solo si VITE_API_URL está definida: en desarrollo no hace falta.
+function preconnectApi(apiUrl: string | undefined): Plugin {
+  return {
+    name: "preconnect-api",
+    transformIndexHtml() {
+      if (!apiUrl) return [];
+      let origin: string;
+      try {
+        origin = new URL(apiUrl).origin;
+      } catch {
+        return [];
+      }
+      return [
+        {
+          tag: "link",
+          attrs: { rel: "preconnect", href: origin },
+          injectTo: "head-prepend",
+        },
+      ];
+    },
+  };
+}
+
+export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
+    // loadEnv también incluye las variables del entorno (las de Vercel) con ese prefijo.
+    preconnectApi(loadEnv(mode, ".", "VITE_").VITE_API_URL),
     VitePWA({
       strategies: "injectManifest",
       srcDir: "src",
@@ -38,4 +65,4 @@ export default defineConfig({
       },
     }),
   ],
-});
+}));
