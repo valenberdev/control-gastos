@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { get } from "../api/client";
 import type {
   Balance,
@@ -9,12 +9,21 @@ import type {
   Category,
 } from "../types";
 import { useAutoRefresh } from "../hooks/useAutoRefresh";
+import { useRetryWhile } from "../hooks/useRetryWhile";
+import { keepIfEqual } from "../lib/keepIfEqual";
 import BalanceCard from "../components/BalanceCard";
-import TrendChart from "../components/TrendChart";
-import CategoryDonut from "../components/CategoryDonut";
+import CardSkeleton from "../components/CardSkeleton";
+import ConnectionNotice from "../components/ConnectionNotice";
 import TransactionsList from "../components/TransactionsList";
 import MonthSwitcher from "../components/MonthSwitcher";
 import AddMovementModal from "../components/AddMovementModal";
+
+// Recharts es más de la mitad del JavaScript de la app: se baja aparte, mientras
+// el resto del dashboard ya se muestra.
+const loadTrendChart = () => import("../components/TrendChart");
+const loadCategoryDonut = () => import("../components/CategoryDonut");
+const TrendChart = lazy(loadTrendChart);
+const CategoryDonut = lazy(loadCategoryDonut);
 
 function currentMonth(): string {
   const now = new Date();
@@ -34,7 +43,8 @@ export default function Dashboard() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [incomes, setIncomes] = useState<Income[]>([]);
-  const [loading, setLoading] = useState(true);
+  // true cuando los movimientos del mes mostrado ya llegaron.
+  const [ready, setReady] = useState(false);
   const [error, setError] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -43,13 +53,13 @@ export default function Dashboard() {
 
   function fetchCategories() {
     get<Category[]>("/categories")
-      .then(setCategories)
+      .then((c) => setCategories((prev) => keepIfEqual(prev, c)))
       .catch(() => setError(true));
   }
 
   function fetchBalance() {
     get<Balance>("/balance")
-      .then(setBalance)
+      .then((b) => setBalance((prev) => keepIfEqual(prev, b)))
       .catch(() => setError(true));
   }
 
@@ -58,7 +68,11 @@ export default function Dashboard() {
     get<TrendPoint[]>(`/reports/trend?period=${requested}`)
       .then((points) => {
         if (requested === periodRef.current)
-          setTrend({ period: requested, points });
+          setTrend((prev) =>
+            prev && prev.period === requested
+              ? keepIfEqual(prev, { period: requested, points })
+              : { period: requested, points },
+          );
       })
       .catch(() => setError(true));
   }
@@ -69,8 +83,9 @@ export default function Dashboard() {
       get<Income[]>(`/incomes?month=${month}`),
     ])
       .then(([e, i]) => {
-        setExpenses(e);
-        setIncomes(i);
+        setExpenses((prev) => keepIfEqual(prev, e));
+        setIncomes((prev) => keepIfEqual(prev, i));
+        setReady(true);
         setError(false);
       })
       .catch(() => setError(true));
@@ -87,6 +102,9 @@ export default function Dashboard() {
   }
 
   useEffect(() => {
+    // Pide el código de los gráficos en paralelo con los datos, sin esperar a la API.
+    void loadTrendChart();
+    void loadCategoryDonut();
     fetchCategories();
     fetchBalance();
   }, []);
@@ -96,38 +114,50 @@ export default function Dashboard() {
   }, [period]);
 
   useEffect(() => {
-    setLoading(true);
-    fetchMonthData().finally(() => setLoading(false));
+    setReady(false);
+    fetchMonthData();
   }, [month]);
 
-  useAutoRefresh(() => {
+  function refreshAll() {
     fetchBalance();
     fetchTrend();
     fetchMonthData();
-  });
-
-  if (error) {
-    return (
-      <div className="state-error">
-        <p>No se pudo conectar con la API. Revisá que esté corriendo.</p>
-      </div>
-    );
   }
+
+  useAutoRefresh(refreshAll);
+
+  // Si falló, reintenta cada pocos segundos: con el servidor gratuito dormido la
+  // primera respuesta tarda casi un minuto y el usuario no debería tener que recargar.
+  useRetryWhile(error, () => {
+    if (categories.length === 0) fetchCategories();
+    refreshAll();
+  });
 
   return (
     <>
+      {error && <ConnectionNotice waking={!balance} onRetry={refreshAll} />}
       <div className="dashboard-grid">
         <div className="area-balance">
-          {balance && <BalanceCard data={balance} />}
+          {balance ? (
+            <BalanceCard data={balance} />
+          ) : (
+            <CardSkeleton height={150} label="Cargando saldo" />
+          )}
         </div>
         <div className="area-trend">
-          {trend && (
-            <TrendChart
-              data={trend.points}
-              dataPeriod={trend.period}
-              selectedPeriod={period}
-              onPeriodChange={setPeriod}
-            />
+          {trend ? (
+            <Suspense
+              fallback={<CardSkeleton height={290} label="Cargando gráfico" />}
+            >
+              <TrendChart
+                data={trend.points}
+                dataPeriod={trend.period}
+                selectedPeriod={period}
+                onPeriodChange={setPeriod}
+              />
+            </Suspense>
+          ) : (
+            <CardSkeleton height={290} label="Cargando gráfico" />
           )}
         </div>
         <div className="col-side">
@@ -135,18 +165,28 @@ export default function Dashboard() {
             <MonthSwitcher month={month} onChange={setMonth} />
           </div>
           <div className="area-donut">
-            {!loading && (
-              <CategoryDonut expenses={expenses} categories={categories} />
+            {ready ? (
+              <Suspense
+                fallback={
+                  <CardSkeleton height={260} label="Cargando categorías" />
+                }
+              >
+                <CategoryDonut expenses={expenses} categories={categories} />
+              </Suspense>
+            ) : (
+              <CardSkeleton height={260} label="Cargando categorías" />
             )}
           </div>
         </div>
         <div className="area-list">
-          {!loading && (
+          {ready ? (
             <TransactionsList
               expenses={expenses}
               incomes={incomes}
               categories={categories}
             />
+          ) : (
+            <CardSkeleton height={320} label="Cargando movimientos" />
           )}
         </div>
       </div>

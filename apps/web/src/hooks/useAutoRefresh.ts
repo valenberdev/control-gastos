@@ -9,7 +9,10 @@ export function useAutoRefresh(callback: () => void, intervalMs = 20000) {
 
     function start() {
       if (interval) return;
-      interval = setInterval(() => callbackRef.current(), intervalMs);
+      // Sin red no tiene sentido pedir: se saltea el ciclo y se retoma al volver.
+      interval = setInterval(() => {
+        if (navigator.onLine) callbackRef.current();
+      }, intervalMs);
     }
 
     function stop() {
@@ -26,12 +29,18 @@ export function useAutoRefresh(callback: () => void, intervalMs = 20000) {
       }
     }
 
+    function handleOnline() {
+      if (document.visibilityState === "visible") callbackRef.current();
+    }
+
     start();
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("online", handleOnline);
 
     return () => {
       stop();
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("online", handleOnline);
     };
   }, [intervalMs]);
 }

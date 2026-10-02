@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import {
   AreaChart,
   Area,
@@ -62,10 +63,14 @@ export default function TrendChart({
   onPeriodChange,
 }: TrendChartProps) {
   const reduceMotion = useReducedMotion();
-  const chartData = data.map((point) => ({
-    ...point,
-    ...describeBucket(point.bucket, dataPeriod),
-  }));
+  const chartData = useMemo(
+    () =>
+      data.map((point) => ({
+        ...point,
+        ...describeBucket(point.bucket, dataPeriod),
+      })),
+    [data, dataPeriod],
+  );
 
   return (
     <div className="card">

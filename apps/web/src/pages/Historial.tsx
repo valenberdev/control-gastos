@@ -2,6 +2,10 @@ import { useEffect, useState } from "react";
 import { get, del } from "../api/client";
 import type { Expense, Income, Category } from "../types";
 import { useAutoRefresh } from "../hooks/useAutoRefresh";
+import { useRetryWhile } from "../hooks/useRetryWhile";
+import { keepIfEqual } from "../lib/keepIfEqual";
+import CardSkeleton from "../components/CardSkeleton";
+import ConnectionNotice from "../components/ConnectionNotice";
 import MonthSwitcher from "../components/MonthSwitcher";
 import TransactionsList from "../components/TransactionsList";
 import type { EditableTransaction } from "../components/TransactionsList";
@@ -17,14 +21,15 @@ export default function Historial() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [incomes, setIncomes] = useState<Income[]>([]);
-  const [loading, setLoading] = useState(true);
+  // true cuando los movimientos del mes mostrado ya llegaron.
+  const [ready, setReady] = useState(false);
   const [error, setError] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<EditableTransaction | null>(null);
 
   function fetchCategories() {
     get<Category[]>("/categories")
-      .then(setCategories)
+      .then((c) => setCategories((prev) => keepIfEqual(prev, c)))
       .catch(() => setError(true));
   }
 
@@ -34,8 +39,9 @@ export default function Historial() {
       get<Income[]>(`/incomes?month=${month}`),
     ])
       .then(([e, i]) => {
-        setExpenses(e);
-        setIncomes(i);
+        setExpenses((prev) => keepIfEqual(prev, e));
+        setIncomes((prev) => keepIfEqual(prev, i));
+        setReady(true);
         setError(false);
       })
       .catch(() => setError(true));
@@ -46,11 +52,17 @@ export default function Historial() {
   }, []);
 
   useEffect(() => {
-    setLoading(true);
-    fetchMonthData().finally(() => setLoading(false));
+    setReady(false);
+    fetchMonthData();
   }, [month]);
 
   useAutoRefresh(() => {
+    fetchMonthData();
+  });
+
+  // Si falló, reintenta cada pocos segundos (el servidor gratuito tarda en despertar).
+  useRetryWhile(error, () => {
+    if (categories.length === 0) fetchCategories();
     fetchMonthData();
   });
 
@@ -77,19 +89,14 @@ export default function Historial() {
     }
   }
 
-  if (error) {
-    return (
-      <div className="state-error">
-        <p>No se pudo conectar con la API. Revisá que esté corriendo.</p>
-      </div>
-    );
-  }
-
   return (
     <div className="page-container">
+      {error && (
+        <ConnectionNotice waking={!ready} onRetry={() => fetchMonthData()} />
+      )}
       <h1 className="page-title">Historial</h1>
       <MonthSwitcher month={month} onChange={setMonth} />
-      {!loading && (
+      {ready ? (
         <TransactionsList
           expenses={expenses}
           incomes={incomes}
@@ -99,6 +106,8 @@ export default function Historial() {
           onEdit={openEdit}
           onDelete={handleDelete}
         />
+      ) : (
+        <CardSkeleton height={320} label="Cargando movimientos" />
       )}
 
       <AddMovementModal
