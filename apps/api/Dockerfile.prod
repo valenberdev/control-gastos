@@ -10,12 +10,19 @@ RUN npm run build
 
 FROM node:24-alpine
 
+# Producción por defecto: sin trazas en las respuestas de error ni links de
+# recuperación en los logs, y con los límites de intentos siempre activos.
+ENV NODE_ENV=production
+
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev && npm cache clean --force
 
-COPY --from=build /app/dist ./dist
+COPY --from=build --chown=node:node /app/dist ./dist
+
+# La imagen oficial trae el usuario "node": el proceso no corre como root.
+USER node
 
 EXPOSE 3000
 
