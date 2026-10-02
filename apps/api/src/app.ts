@@ -12,6 +12,8 @@ import { incomesRouter } from "./routes/incomes.js";
 import { balanceRouter } from "./routes/balance.js";
 import { reportsRouter } from "./routes/reports.js";
 import { pushRouter } from "./routes/push.js";
+import { pool } from "./db/pool.js";
+import { healthDbLimiter } from "./middleware/rateLimit.js";
 
 export const app = express();
 
@@ -35,7 +37,6 @@ if (!process.env.FRONTEND_URL && process.env.NODE_ENV === "production") {
   );
 }
 
-// La API solo devuelve JSON: ninguna página se puede incrustar ni cargar recursos.
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -54,6 +55,16 @@ app.get("/health", (_req, res) => {
     status: "ok",
     commit: process.env.RENDER_GIT_COMMIT?.slice(0, 7) ?? "local",
   });
+});
+
+app.get("/health/db", healthDbLimiter, async (_req, res) => {
+  try {
+    await pool.query("SELECT 1 FROM schema_migrations LIMIT 1");
+    res.json({ status: "ok", db: "ok" });
+  } catch (err) {
+    logError(err, "health/db");
+    res.status(503).json({ status: "error", db: "error" });
+  }
 });
 
 app.use("/auth", authRouter);
@@ -77,7 +88,9 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     return;
   }
   if (status === 400) {
-    res.status(400).json({ error: "El cuerpo del pedido no es un JSON válido" });
+    res
+      .status(400)
+      .json({ error: "El cuerpo del pedido no es un JSON válido" });
     return;
   }
 

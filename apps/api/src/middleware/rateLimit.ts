@@ -40,8 +40,6 @@ export const loginAccountLimiter = rateLimit({
   keyGenerator: (req) => `${clientIp(req)}|${normalizedEmail(req)}`,
 });
 
-// Tope por cuenta sin mirar la IP: frena un ataque repartido entre muchas IP
-// contra una misma cuenta. Es alto para que bloquear a otra persona cueste.
 export const loginAccountGlobalLimiter = rateLimit({
   ...base,
   windowMs: 60 * MINUTE,
@@ -102,9 +100,6 @@ export const deleteAccountLimiter = rateLimit({
   keyGenerator: (req) => req.userId ?? clientIp(req),
 });
 
-// Pedidos del bot para canjear un chat por un token. Los usa un solo cliente (el
-// bot), así que el tope por IP es alto: sirve contra quien enumere chats con una
-// clave interna filtrada, no contra el uso normal.
 export const telegramTokenChatLimiter = rateLimit({
   ...base,
   windowMs: 15 * MINUTE,
@@ -126,4 +121,10 @@ export const pushSubscribeLimiter = rateLimit({
   windowMs: 15 * MINUTE,
   limit: 30,
   keyGenerator: (req) => req.userId ?? clientIp(req),
+});
+
+export const healthDbLimiter = rateLimit({
+  ...base,
+  windowMs: MINUTE,
+  limit: 30,
 });
