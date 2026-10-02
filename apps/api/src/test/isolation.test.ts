@@ -183,8 +183,8 @@ describe("suscripciones push", () => {
     const ana = await createUser();
     const beto = await createUser();
     const subscription = {
-      endpoint: "https://push.example.invalid/suscripcion-de-ana",
-      keys: { p256dh: "p256dh-de-prueba", auth: "auth-de-prueba" },
+      endpoint: "https://fcm.googleapis.com/fcm/send/suscripcion-de-ana",
+      keys: { p256dh: "B" + "A".repeat(86), auth: "A".repeat(22) },
     };
     const alta = await api
       .post("/push/subscribe")

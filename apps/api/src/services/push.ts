@@ -1,5 +1,9 @@
 import webpush from "web-push";
 import { pool } from "../db/pool.js";
+import { logError } from "../lib/logger.js";
+
+// Tiempo máximo de cada pedido al servicio de notificaciones del navegador.
+const PUSH_TIMEOUT_MS = 10_000;
 
 // El asunto VAPID identifica a quien envía los push y tiene que ser una URL
 // https: o mailto:. Se configura con VAPID_SUBJECT; si falta, se usa el
@@ -44,6 +48,7 @@ export async function notifyUser(
             keys: { p256dh: sub.p256dh, auth: sub.auth },
           },
           JSON.stringify(payload),
+          { timeout: PUSH_TIMEOUT_MS },
         );
       } catch (err: any) {
         if (err.statusCode === 404 || err.statusCode === 410) {
@@ -51,7 +56,7 @@ export async function notifyUser(
             sub.id,
           ]);
         } else {
-          console.error("Error enviando push:", err);
+          logError(err, "push");
         }
       }
     }),
