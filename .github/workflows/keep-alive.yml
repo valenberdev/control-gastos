@@ -1,0 +1,32 @@
+name: Mantener activa la demo
+
+on:
+  schedule:
+    - cron: "17 14 * * 1,4"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    name: Consultar la API y la base
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SUPABASE_PING_URL: ${{ secrets.SUPABASE_PING_URL }}
+    steps:
+      - name: API y base (con reintentos por el arranque en frío de Render)
+        run: |
+          for attempt in 1 2 3 4 5; do
+            if curl -fsS --max-time 120 "https://control-gastos-api-ueuf.onrender.com/health/db"; then
+              echo
+              exit 0
+            fi
+            echo "Intento $attempt fallido. Reintento en 30 s."
+            sleep 30
+          done
+          echo "La API o la base no respondieron." >&2
+          exit 1
+      - name: Pedido opcional a la API del proyecto de Supabase
+        if: env.SUPABASE_PING_URL != ''
+        run: curl -sS --max-time 30 -o /dev/null -w "Supabase respondió %{http_code}\n" "$SUPABASE_PING_URL" || true
