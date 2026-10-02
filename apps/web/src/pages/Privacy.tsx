@@ -50,8 +50,9 @@ export default function Privacy() {
         <li>
           <strong>Datos temporales:</strong> los códigos para vincular Telegram
           y los tokens de recuperación de contraseña (de estos solo se guarda un
-          hash). Vencen a los 10 minutos y a la hora, respectivamente, y se
-          eliminan al usarse o al generar uno nuevo.
+          hash). Vencen a los 10 minutos y a la hora, respectivamente. Se
+          eliminan al usarse, y los vencidos que nadie usó se limpian la
+          próxima vez que se genera uno nuevo.
         </li>
         <li>
           <strong>Datos técnicos:</strong> tu dirección IP se usa en memoria
@@ -138,7 +139,9 @@ export default function Privacy() {
       <p>
         Las contraseñas se guardan con hash, las conexiones usan HTTPS, hay
         límites de intentos contra el abuso y solo se accede a tus datos con tu
-        sesión. Ningún sistema es completamente seguro y esto es un proyecto
+        sesión. Al restablecer tu contraseña se cierran las sesiones abiertas y
+        se desvinculan los chats de Telegram y los dispositivos con
+        notificaciones. Ningún sistema es completamente seguro y esto es un proyecto
         personal que no pasó por una auditoría externa.
       </p>
 
