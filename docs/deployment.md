@@ -93,10 +93,13 @@ npx web-push generate-vapid-keys
 
 ### Aplicar el esquema
 
-No hay herramienta de migraciones: los scripts SQL se aplican a mano y en orden.
+Las migraciones son scripts SQL numerados en `db/migrations`. La tabla `schema_migrations` registra cuáles se aplicaron, y **la API no arranca si a la base le falta alguna de las que su código necesita** (la lista está en `apps/api/src/db/schema.ts`): el despliegue falla y Render deja en vivo la versión anterior. Por eso las migraciones se aplican **antes** de desplegar el código que las usa.
 
-- **Base nueva (caso normal):** ejecutar `db/init.sql` completo, una sola vez. Crea todas las tablas, las seis categorías iniciales y activa RLS. Ya incluye lo que hacen las migraciones 001, 002 y 003, así que no hay que correrlas.
-- **Base creada antes de la migración 001:** ejecutar `db/migrations/001_recuperacion_de_contrasena.sql`. Pasa los emails a minúsculas, agrega el `CHECK` correspondiente y crea la tabla `password_resets`. Corre en una transacción; si dos emails existentes solo difieren en mayúsculas, el `UNIQUE` falla y no se aplica nada.
+- **Base nueva:** ejecutar `db/init.sql` completo, una sola vez. Ya incluye todas las migraciones y las registra. No es idempotente: correrlo dos veces sobre la misma base falla.
+- **Base existente:** `bash db/migrate.sh`. Pide la cadena de conexión (no la guarda), muestra las migraciones pendientes y las aplica en orden. Necesita el servicio `db` de docker compose levantado, porque usa su `psql`.
+- **Primera vez en una base anterior al registro:** aplicar a mano la migración 005, que verifica que de la 001 a la 004 estén aplicadas y crea el registro: `docker compose exec -T -e CONN="$CONN" db sh -c 'psql "$CONN" -v ON_ERROR_STOP=1' < db/migrations/005_registro_de_migraciones.sql`.
+
+Cada migración nueva lleva un número de tres dígitos (`006_...sql`), se agrega a `REQUIRED_MIGRATIONS` y un test comprueba que la lista coincida con los archivos.
 
 - **Base existente:** aplicar, en orden, las migraciones que falten:
   - `db/migrations/002_habilitar_rls.sql`: activa RLS (sin políticas) en las nueve tablas y, en Supabase, quita los privilegios de `anon` y `authenticated`. La API se conecta con el rol dueño de las tablas (`postgres`), que no se ve afectado. Después del cambio, el Security Advisor de Supabase no debería listar tablas sin RLS.
