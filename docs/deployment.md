@@ -23,6 +23,8 @@ Orden recomendado:
 5. Frontend en Vercel con la URL de la API. Después, volver a la API y poner la URL real en `FRONTEND_URL`.
 6. Comprobar con la sección [Verificar un despliegue](#8-verificar-que-un-despliegue-quedó-en-vivo).
 
+**Al actualizar desde una versión anterior:** aplicar primero las migraciones pendientes (sección 3) y después desplegar la API **y el bot juntos**. La API nueva entrega al bot tokens de 15 minutos y el bot anterior los guardaba 6 días: hasta que se reinicie con el código nuevo, fallaría al cargar movimientos. Restablecer una contraseña ahora también desvincula los chats de Telegram de esa cuenta.
+
 Las dos imágenes de producción (`apps/api/Dockerfile.prod` y `apps/bot/Dockerfile.prod`) son multi-stage: una etapa compila TypeScript y la imagen final solo lleva las dependencias de producción y `dist/`. El workflow de CI construye ambas en cada cambio (sin publicarlas), así que un Dockerfile roto se detecta antes de desplegar.
 
 ## 2. Variables de entorno por servicio
@@ -39,12 +41,12 @@ Los archivos `.env.example` (raíz y `apps/web`) listan todas con un comentario.
 | `JWT_SECRET`                            | Sí               | Firma de los tokens de sesión                                                                                                                            |
 | `INTERNAL_API_KEY`                      | Sí               | Clave que el bot manda en `x-internal-key`. Tiene que ser idéntica en el bot                                                                             |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | Sí               | Claves de las notificaciones push. Sin ellas la API no arranca                                                                                           |
-| `VAPID_SUBJECT`                         | No               | Contacto VAPID (`https:` o `mailto:`). Si falta se usa `FRONTEND_URL` cuando es https                                                                    |
+| `VAPID_SUBJECT` | No | Contacto VAPID (`https:` o `mailto:`). Si falta se usa `FRONTEND_URL` cuando es https. Mejor una URL que un email personal: cualquier usuario puede leer este valor en el pedido que la API le hace a un servicio de push |
 | `FRONTEND_URL`                          | Sí en producción | Origen que acepta CORS y base de los links de recuperación. Sin barra final (la API la quita)                                                            |
 | `TRUST_PROXY_HOPS`                      | Sí en Render     | Cantidad de proxies delante de la API; ver [más abajo](#trust_proxy_hops)                                                                                |
 | `RESEND_API_KEY`                        | Para mails       | Sin ella, en producción no se envía ningún mail y se registra un error en el log                                                                         |
 | `EMAIL_FROM`                            | No               | Remitente. Por defecto `Control de Gastos <onboarding@resend.dev>`                                                                                       |
-| `NODE_ENV`                              | Recomendada      | Con `production` los límites de intentos no se pueden desactivar y el link de recuperación nunca se imprime en el log                                    |
+| `NODE_ENV` | No | Las imágenes de producción ya lo fijan en `production`: los límites de intentos no se pueden desactivar y el link de recuperación nunca se imprime en el log |
 | `APP_TIMEZONE`                          | No               | Zona horaria por defecto de las cuentas nuevas (por defecto `America/Argentina/Buenos_Aires`)                                                            |
 | `PORT`                                  | No               | Render la define (10000 por defecto); fuera de Render, 3000                                                                                              |
 | `RENDER_GIT_COMMIT`                     | —                | La define Render. `/health` la informa como `commit`                                                                                                     |
@@ -92,8 +94,13 @@ npx web-push generate-vapid-keys
 
 No hay herramienta de migraciones: los scripts SQL se aplican a mano y en orden.
 
-- **Base nueva (caso normal):** ejecutar `db/init.sql` completo, una sola vez. Crea todas las tablas y las seis categorías iniciales. Ya incluye lo que hace la migración 001, así que no hay que correrla.
+- **Base nueva (caso normal):** ejecutar `db/init.sql` completo, una sola vez. Crea todas las tablas, las seis categorías iniciales y activa RLS. Ya incluye lo que hacen las migraciones 001, 002 y 003, así que no hay que correrlas.
 - **Base creada antes de la migración 001:** ejecutar `db/migrations/001_recuperacion_de_contrasena.sql`. Pasa los emails a minúsculas, agrega el `CHECK` correspondiente y crea la tabla `password_resets`. Corre en una transacción; si dos emails existentes solo difieren en mayúsculas, el `UNIQUE` falla y no se aplica nada.
+
+- **Base existente:** aplicar, en orden, las migraciones que falten:
+  - `db/migrations/002_habilitar_rls.sql`: activa RLS (sin políticas) en las nueve tablas y, en Supabase, quita los privilegios de `anon` y `authenticated`. La API se conecta con el rol dueño de las tablas (`postgres`), que no se ve afectado. Después del cambio, el Security Advisor de Supabase no debería listar tablas sin RLS.
+  - `db/migrations/003_version_de_sesion.sql`: agrega `users.token_version`. **Aplicarla antes de desplegar la versión de la API que la usa:** si el código nuevo corre sin la columna, el login y las sesiones fallan.
+  - `db/migrations/004_limpiar_suscripciones_push.sql`: borra las suscripciones push guardadas cuyo endpoint no sea de un servicio de notificaciones de navegadores (la API nueva ya solo acepta esos). Es de una sola vez; quien pierda su suscripción vuelve a activar las notificaciones desde la app.
 
 `init.sql` no es idempotente (usa `CREATE TABLE` sin `IF NOT EXISTS`): correrlo dos veces sobre la misma base falla.
 
@@ -154,7 +161,8 @@ Como el servicio gratuito se duerme, un mensaje puede llegar mientras el bot (o 
 1. Importar el repositorio en Vercel con **Root Directory** `apps/web` (Vercel detecta Vite: comando de build `vite build`, salida en `dist`).
 2. Cargar `VITE_API_URL` (URL de la API) y `VITE_VAPID_PUBLIC_KEY`.
 3. `apps/web/vercel.json` reescribe todas las rutas a `/index.html`. Sin esa regla, recargar `/historial` o abrir el link de recuperación de contraseña daría 404, porque son rutas del router del cliente.
-4. Volver a la API y definir `FRONTEND_URL` con la URL que asignó Vercel, sin barra final. Si no coincide exactamente con el origen del navegador, las llamadas fallan por CORS.
+4. Si la URL de la API cambia, actualizarla también en `apps/web/vercel.json`: la política CSP (`connect-src`) solo permite pedidos a esa dirección y a la propia web. El mismo archivo fija el resto de los encabezados de seguridad de la web.
+5. Volver a la API y definir `FRONTEND_URL` con la URL que asignó Vercel, sin barra final. Si no coincide exactamente con el origen del navegador, las llamadas fallan por CORS.
 
 La PWA se registra con un service worker propio (`apps/web/src/sw.ts`, vite-plugin-pwa con `injectManifest`) que precachea los archivos de la aplicación y atiende las notificaciones push. Las notificaciones push en iOS solo funcionan con la PWA instalada en la pantalla de inicio y servida por HTTPS.
 
@@ -213,3 +221,19 @@ curl https://<URL_DEL_BOT>/health
 | El mail de recuperación no llega                                 | Resend en modo de prueba (solo entrega a la dirección de la cuenta), o falta `RESEND_API_KEY`                                                                                                                             |
 | No se activan las notificaciones                                 | `VITE_VAPID_PUBLIC_KEY` distinta de la clave de la API, o en iOS la PWA no está instalada                                                                                                                                 |
 | El primer pedido tarda                                           | El servicio gratuito de Render estaba dormido                                                                                                                                                                             |
+
+## 10. Rotar un secreto
+
+Cuando una clave se filtra, o por higiene, se cambia en el panel de cada servicio y se vuelve a desplegar. Qué pasa con cada una:
+
+| Secreto | Dónde cambiarlo | Efecto |
+|---|---|---|
+| `JWT_SECRET` | API | Todas las sesiones dejan de valer: hay que volver a iniciar sesión |
+| `INTERNAL_API_KEY` | API **y** bot, a la vez | Hasta que ambos tengan el mismo valor, el bot no puede vincular chats ni pedir tokens |
+| `WEBHOOK_SECRET` | Bot | El bot vuelve a registrar el webhook con el valor nuevo al arrancar |
+| `TELEGRAM_BOT_TOKEN` | Bot (y `/revoke` en @BotFather) | El bot anterior deja de responder; el webhook se registra de nuevo al arrancar |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` y `VITE_VAPID_PUBLIC_KEY` | API y Vercel | Las suscripciones push existentes dejan de funcionar: cada persona tiene que volver a activar las notificaciones |
+| `RESEND_API_KEY` | API | Sin efecto para los usuarios |
+| Contraseña de la base | Supabase y `DATABASE_URL` de la API | La API no conecta hasta tener la cadena nueva |
+
+Usar siempre valores distintos en desarrollo y en producción: el `.env` local no debería contener ninguna clave de producción.

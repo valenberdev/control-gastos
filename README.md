@@ -50,6 +50,7 @@ Capturas de la app con datos de ejemplo.
 - **Notificaciones push** al registrar un gasto o un ingreso, desde la web o desde el bot.
 - **PWA:** instalable, con service worker propio que guarda en caché los archivos de la aplicación (los datos no están disponibles sin conexión). Tema claro y oscuro.
 - **Eliminar la cuenta** desde Perfil, con confirmación de contraseña: borra también los movimientos, el vínculo con Telegram y las suscripciones push.
+- **Páginas legales** (privacidad y términos), enlazadas desde el footer y el Perfil.
 
 ## Arquitectura
 
@@ -114,29 +115,36 @@ flowchart LR
 
 Lo que está implementado:
 
-- Contraseñas con `bcryptjs` (costo 10), mínimo de 8 caracteres. El login compara contra un hash ficticio cuando el email no existe y responde igual, para no filtrar qué cuentas hay.
+- Contraseñas con `bcryptjs` (costo 10): entre 8 caracteres y 72 bytes (el límite de bcrypt, que ignora lo que sigue), sin caracteres repetidos y sin las más comunes. El login compara contra un hash ficticio cuando el email no existe y responde igual, para no filtrar qué cuentas hay.
 - Validación de entrada en la API: montos positivos con hasta 2 decimales y un máximo, descripciones de hasta 200 caracteres (el bot recorta las más largas), meses con formato `AAAA-MM` e ids con formato UUID.
-- Sesiones con JWT de 7 días. Todas las consultas de datos filtran por el `user_id` del token (un `userId` en el cuerpo se ignora) y hay tests de aislamiento entre usuarios.
+- Sesiones con JWT HS256 de 7 días que llevan la versión de sesión de la cuenta. Restablecer la contraseña sube esa versión y cierra todas las sesiones abiertas, además de los chats de Telegram vinculados, las suscripciones push y los códigos pendientes. Todas las consultas de datos filtran por el `user_id` del token (un `userId` en el cuerpo se ignora) y hay tests de aislamiento entre usuarios.
 - Límites de intentos (`express-rate-limit`, en memoria):
 
   | Acción | Límite |
   |---|---|
-  | Login | 5 fallos cada 15 min por IP y email; 30 fallos cada 15 min por IP |
+  | Login | 5 fallos cada 15 min por IP y email; 30 fallos cada 15 min por IP; 50 fallos por hora por cuenta, desde cualquier IP |
   | Registro | 10 por hora por IP |
   | Pedir recuperación de contraseña | 3 por hora por email; 5 por hora por IP |
   | Restablecer contraseña | 10 fallos cada 15 min por IP |
   | Generar código de Telegram | 10 por hora por cuenta |
   | Canjear código de Telegram | 5 fallos cada 15 min por chat |
+  | Pedir un token para un chat (bot) | 30 cada 15 min por chat; 600 cada 15 min en total |
+  | Suscribir notificaciones push | 30 cada 15 min por cuenta |
 
-- Endpoints del bot protegidos con una clave interna comparada en tiempo constante (`crypto.timingSafeEqual`). Si la clave no está configurada, nadie entra.
+- Endpoints del bot protegidos con una clave interna comparada en tiempo constante (`crypto.timingSafeEqual`). Si la clave no está configurada, nadie entra. Con esa clave la API entrega al bot tokens de 15 minutos atados a un chat: dejan de valer apenas el chat se desvincula, lo que se puede hacer desde Perfil.
 - Webhook de Telegram validado con token secreto.
+- Las suscripciones push solo aceptan los servicios de notificaciones de los navegadores (Firebase Cloud Messaging, Mozilla, Apple y Windows) por HTTPS, con un máximo de 10 por cuenta y un tiempo máximo de 10 segundos por envío: la API hace pedidos salientes a esas direcciones y no puede apuntar a otro lado.
 - Consultas parametrizadas; el link de recuperación se arma con `FRONTEND_URL`, no con el encabezado `Host` del pedido.
 - CORS limitado a un único origen (`FRONTEND_URL`). Conexión a la base cifrada con TLS en producción (`DATABASE_SSL`).
-- La Data API automática de Supabase está desactivada: la única puerta a los datos es la API propia, con su autenticación y sus límites.
+- Encabezados de seguridad: `helmet` en la API (sin `X-Powered-By`) y, en la web, una política CSP estricta (sin scripts inline ni de terceros), `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` y `nosniff` desde `apps/web/vercel.json`. Los errores de la API son siempre JSON genérico, sin trazas.
+- Los logs no incluyen el detalle de los errores de Postgres (puede traer datos de la fila) ni los endpoints de las suscripciones push.
+- Las imágenes de producción corren como usuario `node` con `NODE_ENV=production`; las acciones de CI están fijadas por SHA y Dependabot mantiene al día las dependencias. Para reportar una vulnerabilidad, ver [SECURITY.md](SECURITY.md).
+- La Data API automática de Supabase está desactivada: la única puerta a los datos es la API propia, con su autenticación y sus límites. Como segunda barrera, todas las tablas tienen RLS activo sin políticas (`db/migrations/002_habilitar_rls.sql`).
 - Los `.env` están en `.gitignore`; las claves viven solo en las variables de entorno de cada servicio.
 - Cada pedido autenticado verifica que la cuenta siga existiendo (con un cache de 30 segundos): al eliminar una cuenta, sus sesiones dejan de valer en segundos y no a los 7 días.
+- Sin cookies ni analíticas; la tipografía se sirve desde el propio dominio.
 
-Lo que **no** está: encabezados de seguridad (por ejemplo `helmet`), revocación de sesiones, doble factor de autenticación. Ver [Limitaciones](#limitaciones-conocidas-y-próximos-pasos).
+Lo que **no** está: doble factor de autenticación ni verificación de email. Ver [Limitaciones](#limitaciones-conocidas-y-próximos-pasos).
 
 ## Tests y CI
 
@@ -207,6 +215,8 @@ Las rutas marcadas «Sesión» exigen `Authorization: Bearer <JWT>`; «Clave int
 | POST | `/auth/register`, `/auth/login` | Pública |
 | POST | `/auth/forgot-password`, `/auth/reset-password` | Pública |
 | GET | `/auth/me` | Sesión |
+| GET | `/auth/telegram` | Sesión (chats vinculados) |
+| DELETE | `/auth/telegram/:chatId` | Sesión (desvincula un chat) |
 | PATCH | `/auth/timezone` | Sesión |
 | POST | `/auth/link-code` | Sesión |
 | POST | `/auth/link-telegram`, `/auth/telegram-token` | Clave interna |
@@ -231,6 +241,8 @@ db/
   migrations/ Scripts para bases creadas antes de cada cambio
 docs/         Guía de despliegue
 .github/workflows/ci.yml
+.github/dependabot.yml  Actualizaciones automáticas de dependencias
+SECURITY.md           Cómo reportar una vulnerabilidad
 .nvmrc                Versión de Node (24)
 docker-compose.yml    Entorno local: db, api y bot
 PRODUCT.md, DESIGN.md Documentos de producto y de diseño del frontend
@@ -240,7 +252,7 @@ PRODUCT.md, DESIGN.md Documentos de producto y de diseño del frontend
 
 - La API, el bot y la base viven en planes gratuitos, con *cold starts* de hasta cerca de un minuto.
 - Los límites de intentos están en memoria: se reinician con cada reinicio del servicio. El bot también guarda en memoria los `update_id` vistos y las categorías pendientes de elegir.
-- Los tokens de sesión (7 días) no se revocan al cambiar la contraseña ni al cerrar sesión; cerrar sesión solo borra el token del navegador. Sí dejan de valer cuando se elimina la cuenta.
+- Cerrar sesión solo borra el token del navegador: el token sigue siendo válido hasta que vence (7 días), se restablece la contraseña o se elimina la cuenta. No hay una opción para cerrar todas las sesiones sin cambiar la contraseña.
 - La conexión a la base va cifrada pero sin verificar el certificado del servidor (se puede activar con `DATABASE_CA_CERT`).
 - La recuperación de contraseña por email no llega a cualquier persona hasta verificar un dominio en Resend.
 - No hay verificación de email.
@@ -249,8 +261,9 @@ PRODUCT.md, DESIGN.md Documentos de producto y de diseño del frontend
 - Las categorías son fijas y compartidas por todas las cuentas, y la interfaz muestra los montos en pesos argentinos.
 - No hay tests del frontend ni de la entrega real de push, del webhook del bot o de Resend.
 - Las migraciones se aplican a mano y en orden; no hay una herramienta que registre cuáles se corrieron.
+- La política de privacidad y los términos son un borrador sin revisión legal.
 
-Próximos pasos posibles: verificar un dominio en Resend, verificación de email, revocar sesiones al cambiar la contraseña, guardar los límites de intentos fuera de la memoria del proceso, agregar tests del frontend y encabezados de seguridad.
+Próximos pasos posibles: verificar un dominio en Resend, verificación de email, un botón para cerrar todas las sesiones, guardar los límites de intentos fuera de la memoria del proceso y agregar tests del frontend.
 
 ## Licencia
 
