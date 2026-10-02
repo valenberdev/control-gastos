@@ -48,7 +48,7 @@ async function ensureCategories(token: string): Promise<void> {
   const res = await fetch(`${API_URL}/categories`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) throw new Error(`API respondió ${res.status}`);
+  if (!res.ok) throw new ApiError(res.status);
   const categories = (await res.json()) as { id: string; name: string }[];
   categoryIds = Object.fromEntries(categories.map((c) => [c.name, c.id]));
 }
@@ -65,14 +65,48 @@ async function linkTelegram(code: string, chatId: string): Promise<boolean> {
   return res.ok;
 }
 
+class ApiError extends Error {
+  constructor(public status: number) {
+    super(`API respondió ${status}`);
+  }
+}
+
+// La API entrega tokens de 15 minutos atados al chat: se reutilizan 10.
 const tokenCache = new Map<string, { token: string; cachedAt: number }>();
-const TOKEN_TTL_MS = 6 * 24 * 60 * 60 * 1000; // 6 días, por debajo de los 7 del JWT
+const TOKEN_TTL_MS = 10 * 60 * 1000;
+
+// Un chat sin vincular que escribe seguido no tiene que costarle un pedido a la
+// API por mensaje: se recuerda un minuto que no está vinculado.
+const notLinked = new Map<string, number>();
+const NOT_LINKED_TTL_MS = 60 * 1000;
+
+function forgetChat(chatId: string): void {
+  tokenCache.delete(chatId);
+  notLinked.delete(chatId);
+}
+
+// Si la API rechaza el token (el chat se desvinculó o la cuenta cambió), se
+// descarta el guardado y se avisa. Devuelve true si el error era ese.
+async function handleRevoked(
+  err: unknown,
+  chatId: string,
+  reply: (text: string) => Promise<unknown>,
+): Promise<boolean> {
+  if (!(err instanceof ApiError) || err.status !== 401) return false;
+  forgetChat(chatId);
+  await reply(
+    "Este chat ya no está vinculado a tu cuenta. Generá un código desde la app y mandá /vincular <código>.",
+  );
+  return true;
+}
 
 async function getTokenForChat(chatId: string): Promise<string | null> {
   const cached = tokenCache.get(chatId);
   if (cached && Date.now() - cached.cachedAt < TOKEN_TTL_MS) {
     return cached.token;
   }
+  const missUntil = notLinked.get(chatId);
+  if (missUntil !== undefined && Date.now() < missUntil) return null;
 
   const res = await fetch(`${API_URL}/auth/telegram-token`, {
     method: "POST",
@@ -82,6 +116,7 @@ async function getTokenForChat(chatId: string): Promise<string | null> {
     },
     body: JSON.stringify({ chatId }),
   });
+  if (res.status === 404) notLinked.set(chatId, Date.now() + NOT_LINKED_TTL_MS);
   if (!res.ok) return null;
 
   const data = (await res.json()) as { token: string };
@@ -109,7 +144,7 @@ async function createExpense(
       source: "telegram",
     }),
   });
-  if (!res.ok) throw new Error(`API respondió ${res.status}`);
+  if (!res.ok) throw new ApiError(res.status);
 }
 
 async function createIncome(
@@ -125,7 +160,7 @@ async function createIncome(
     },
     body: JSON.stringify({ amount, description, source: "telegram" }),
   });
-  if (!res.ok) throw new Error(`API respondió ${res.status}`);
+  if (!res.ok) throw new ApiError(res.status);
 }
 
 const pendingExpenses = new Map<
@@ -145,7 +180,7 @@ bot.command("vincular", async (ctx) => {
   const chatId = ctx.chat.id.toString();
   const linked = await linkTelegram(code, chatId);
   if (linked) {
-    tokenCache.delete(chatId);
+    forgetChat(chatId);
     await ctx.reply("¡Listo! Tu cuenta quedó vinculada.");
   } else {
     await ctx.reply(
@@ -168,7 +203,7 @@ bot.command("saldo", async (ctx) => {
     const res = await fetch(`${API_URL}/balance`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (!res.ok) throw new Error(`API respondió ${res.status}`);
+    if (!res.ok) throw new ApiError(res.status);
     const data = (await res.json()) as {
       balance: number;
       totalIncome: number;
@@ -177,7 +212,8 @@ bot.command("saldo", async (ctx) => {
     await ctx.reply(
       `Saldo: $${data.balance}\nIngresos: $${data.totalIncome}\nGastos: $${data.totalExpenses}`,
     );
-  } catch {
+  } catch (err) {
+    if (await handleRevoked(err, chatId, (t) => ctx.reply(t))) return;
     await ctx.reply("No pude consultar el saldo. Probá de nuevo.");
   }
 });
@@ -206,7 +242,8 @@ bot.on("message:text", async (ctx) => {
     try {
       await createIncome(token, parsed.amount, parsed.description);
       await ctx.reply(`Ingreso registrado: $${parsed.amount}.`);
-    } catch {
+    } catch (err) {
+      if (await handleRevoked(err, chatId, (t) => ctx.reply(t))) return;
       await ctx.reply("Hubo un error guardando el ingreso. Probá de nuevo.");
     }
     return;
@@ -214,7 +251,8 @@ bot.on("message:text", async (ctx) => {
 
   try {
     await ensureCategories(token);
-  } catch {
+  } catch (err) {
+    if (await handleRevoked(err, chatId, (t) => ctx.reply(t))) return;
     await ctx.reply(
       "No pude cargar las categorías. Probá de nuevo en un momento.",
     );
@@ -230,7 +268,8 @@ bot.on("message:text", async (ctx) => {
         parsed.description,
       );
       await ctx.reply(`Registrado: $${parsed.amount} en ${parsed.category}.`);
-    } catch {
+    } catch (err) {
+      if (await handleRevoked(err, chatId, (t) => ctx.reply(t))) return;
       await ctx.reply("Hubo un error guardando el gasto. Probá de nuevo.");
     }
     return;
@@ -269,8 +308,10 @@ bot.on("callback_query:data", async (ctx) => {
       pending.description,
     );
     await ctx.editMessageText(`Registrado: $${pending.amount} en ${category}.`);
-  } catch {
-    await ctx.reply("Hubo un error guardando el gasto. Probá de nuevo.");
+  } catch (err) {
+    if (!(await handleRevoked(err, chatId, (t) => ctx.reply(t)))) {
+      await ctx.reply("Hubo un error guardando el gasto. Probá de nuevo.");
+    }
   } finally {
     pendingExpenses.delete(chatId);
     await ctx.answerCallbackQuery();
