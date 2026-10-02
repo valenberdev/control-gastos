@@ -9,7 +9,9 @@ balanceRouter.get("/", async (req, res) => {
 
   try {
     const result = await pool.query(
-      `WITH totals AS (
+      // MATERIALIZED: sin esto Postgres "inlina" la CTE y repite cada suma por cada
+      // columna que la usa (medido: el doble de buffers y de tiempo).
+      `WITH totals AS MATERIALIZED (
          SELECT
            COALESCE((SELECT SUM(amount) FROM incomes WHERE user_id = $1), 0) AS total_income,
            COALESCE((SELECT SUM(amount) FROM expenses WHERE user_id = $1), 0) AS total_expenses

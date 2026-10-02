@@ -34,6 +34,11 @@ reportsRouter.get("/trend", async (req, res) => {
            date_trunc($2::text, now() AT TIME ZONE (SELECT timezone FROM tz)),
            ('1 ' || $2::text)::interval
          ) AS bucket
+       ),
+       bounds AS (
+         SELECT (
+           date_trunc($2::text, now() AT TIME ZONE (SELECT timezone FROM tz)) - ($3::int - 1) * ('1 ' || $2::text)::interval
+         )::date AS start_date
        )
        SELECT
          to_char(b.bucket, 'YYYY-MM-DD') AS bucket,
@@ -42,11 +47,11 @@ reportsRouter.get("/trend", async (req, res) => {
        FROM buckets b
        LEFT JOIN (
          SELECT date_trunc($2::text, income_date::timestamp) AS bucket, SUM(amount) AS total
-         FROM incomes WHERE user_id = $1 GROUP BY 1
+         FROM incomes WHERE user_id = $1 AND income_date >= (SELECT start_date FROM bounds) GROUP BY 1
        ) i ON i.bucket = b.bucket
        LEFT JOIN (
          SELECT date_trunc($2::text, expense_date::timestamp) AS bucket, SUM(amount) AS total
-         FROM expenses WHERE user_id = $1 GROUP BY 1
+         FROM expenses WHERE user_id = $1 AND expense_date >= (SELECT start_date FROM bounds) GROUP BY 1
        ) e ON e.bucket = b.bucket
        ORDER BY b.bucket`,
       [userId, period, count],
