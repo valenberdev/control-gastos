@@ -33,26 +33,7 @@
       content="https://control-gastos-roan-eight.vercel.app/"
     />
     <meta property="og:locale" content="es_AR" />
-    <script>
-      (function () {
-        try {
-          var stored = localStorage.getItem("theme");
-          var theme =
-            stored === "light" || stored === "dark"
-              ? stored
-              : window.matchMedia("(prefers-color-scheme: light)").matches
-                ? "light"
-                : "dark";
-          document.documentElement.dataset.theme = theme;
-          var meta = document.querySelector('meta[name="theme-color"]');
-          if (meta)
-            meta.setAttribute(
-              "content",
-              theme === "light" ? "#E9EDF7" : "#05070F",
-            );
-        } catch (e) {}
-      })();
-    </script>
+    <script src="/theme-init.js"></script>
   </head>
   <body>
     <div id="root"></div>
