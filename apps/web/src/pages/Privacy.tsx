@@ -51,8 +51,8 @@ export default function Privacy() {
           <strong>Datos temporales:</strong> los códigos para vincular Telegram
           y los tokens de recuperación de contraseña (de estos solo se guarda un
           hash). Vencen a los 10 minutos y a la hora, respectivamente. Se
-          eliminan al usarse, y los vencidos que nadie usó se limpian la
-          próxima vez que se genera uno nuevo.
+          eliminan al usarse, y los vencidos que nadie usó se limpian la próxima
+          vez que se genera uno nuevo.
         </li>
         <li>
           <strong>Datos técnicos:</strong> tu dirección IP se usa en memoria
@@ -135,14 +135,21 @@ export default function Privacy() {
         según sus propias políticas.
       </p>
 
+      <p>
+        Además se hacen copias de respaldo periódicas de la base de datos, que
+        se guardan de forma local y se usan solo para recuperar el servicio si
+        se pierden datos. Una cuenta eliminada puede seguir figurando en copias
+        anteriores hasta que se descartan, a los 90 días como máximo.
+      </p>
+
       <h2>8. Seguridad</h2>
       <p>
         Las contraseñas se guardan con hash, las conexiones usan HTTPS, hay
         límites de intentos contra el abuso y solo se accede a tus datos con tu
         sesión. Al restablecer tu contraseña se cierran las sesiones abiertas y
         se desvinculan los chats de Telegram y los dispositivos con
-        notificaciones. Ningún sistema es completamente seguro y esto es un proyecto
-        personal que no pasó por una auditoría externa.
+        notificaciones. Ningún sistema es completamente seguro y esto es un
+        proyecto personal que no pasó por una auditoría externa.
       </p>
 
       <h2>9. Tus derechos y cómo ejercerlos</h2>
