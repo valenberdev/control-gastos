@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { pool } from "../db/pool.js";
+import { logError } from "../lib/logger.js";
 import { notifyUser } from "../services/push.js";
 import {
   isUuid,
@@ -42,7 +43,7 @@ expensesRouter.get("/", async (req, res) => {
         );
     res.json(result.rows.map((r) => ({ ...r, amount: Number(r.amount) })));
   } catch (err) {
-    console.error(err);
+    logError(err);
     res.status(500).json({ error: "Error al obtener gastos" });
   }
 });
@@ -77,14 +78,14 @@ expensesRouter.post("/", async (req, res) => {
     notifyUser(userId, {
       title: "Gasto registrado",
       body: `$${expense.amount}${description ? ` — ${description}` : ""}`,
-    }).catch((err) => console.error("Error al notificar:", err));
+    }).catch((err) => logError(err, "notificar"));
   } catch (err) {
     const { code, constraint } = err as { code?: string; constraint?: string };
     if (code === "23503" && constraint === "expenses_category_id_fkey") {
       res.status(400).json({ error: "La categoría no existe" });
       return;
     }
-    console.error(err);
+    logError(err);
     res.status(500).json({ error: "Error al crear el gasto" });
   }
 });
@@ -154,7 +155,7 @@ expensesRouter.patch("/:id", async (req, res) => {
       res.status(400).json({ error: "La categoría no existe" });
       return;
     }
-    console.error(err);
+    logError(err);
     res.status(500).json({ error: "Error al actualizar el gasto" });
   }
 });
@@ -179,7 +180,7 @@ expensesRouter.delete("/:id", async (req, res) => {
     }
     res.json({ success: true });
   } catch (err) {
-    console.error(err);
+    logError(err);
     res.status(500).json({ error: "Error al borrar el gasto" });
   }
 });

@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { pool } from "../db/pool.js";
+import { logError } from "../lib/logger.js";
 import { notifyUser } from "../services/push.js";
 import {
   isUuid,
@@ -45,7 +46,7 @@ incomesRouter.get("/", async (req, res) => {
         );
     res.json(result.rows.map((r) => ({ ...r, amount: Number(r.amount) })));
   } catch (err) {
-    console.error(err);
+    logError(err);
     res.status(500).json({ error: "Error al obtener ingresos" });
   }
 });
@@ -76,9 +77,9 @@ incomesRouter.post("/", async (req, res) => {
     notifyUser(userId, {
       title: "Ingreso registrado",
       body: `$${income.amount}${description ? ` — ${description}` : ""}`,
-    }).catch((err) => console.error("Error al notificar:", err));
+    }).catch((err) => logError(err, "notificar"));
   } catch (err) {
-    console.error(err);
+    logError(err);
     res.status(500).json({ error: "Error al crear el ingreso" });
   }
 });
@@ -135,7 +136,7 @@ incomesRouter.patch("/:id", async (req, res) => {
     }
     res.json({ ...row, amount: Number(row.amount) });
   } catch (err) {
-    console.error(err);
+    logError(err);
     res.status(500).json({ error: "Error al actualizar el ingreso" });
   }
 });
@@ -160,7 +161,7 @@ incomesRouter.delete("/:id", async (req, res) => {
     }
     res.json({ success: true });
   } catch (err) {
-    console.error(err);
+    logError(err);
     res.status(500).json({ error: "Error al borrar el ingreso" });
   }
 });

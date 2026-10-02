@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { pool } from "../db/pool.js";
+import { logError } from "../lib/logger.js";
 
 export const reportsRouter = Router();
 
@@ -58,7 +59,7 @@ reportsRouter.get("/trend", async (req, res) => {
       })),
     );
   } catch (err) {
-    console.error(err);
+    logError(err);
     res.status(500).json({ error: "Error al calcular la tendencia" });
   }
 });

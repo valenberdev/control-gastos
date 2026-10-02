@@ -1,3 +1,5 @@
+import { logError } from "../lib/logger.js";
+
 interface EmailMessage {
   to: string;
   subject: string;
@@ -32,12 +34,14 @@ export async function sendEmail({
     });
 
     if (!res.ok) {
-      console.error("Resend rechazó el email:", res.status, await res.text());
+      // El cuerpo del error puede nombrar al destinatario: solo se registra su tipo.
+      const body = (await res.json().catch(() => null)) as { name?: string } | null;
+      console.error("[email] Resend rechazó el email:", res.status, body?.name ?? "");
       return false;
     }
     return true;
   } catch (err) {
-    console.error("Error al enviar el email:", err);
+    logError(err, "email");
     return false;
   }
 }
