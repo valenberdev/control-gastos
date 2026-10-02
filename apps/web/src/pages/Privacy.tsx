@@ -82,9 +82,10 @@ export default function Privacy() {
       <h2>4. Cookies y almacenamiento local</h2>
       <p>
         La app no usa cookies. Guarda en el almacenamiento local de tu navegador
-        la sesión iniciada y tu preferencia de tema, y un service worker guarda
-        en caché los archivos de la aplicación para poder instalarla. Cerrar
-        sesión borra la sesión guardada.
+        la sesión iniciada, tu preferencia de tema y si ya cerraste la guía para
+        instalar la app, y un service worker guarda en caché los archivos de la
+        aplicación para poder instalarla. Cerrar sesión borra la sesión
+        guardada.
       </p>
 
       <h2>5. Proveedores que intervienen</h2>
