@@ -42,12 +42,14 @@ services:
       EMAIL_FROM: ${EMAIL_FROM:-}
       TEST_DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}_test
       DB_INIT_SQL: /db/init.sql
+      DB_MIGRATIONS_DIR: /db/migrations
     ports:
       - "127.0.0.1:3000:3000"
     volumes:
       - ./apps/api:/app
       - /app/node_modules
       - ./db/init.sql:/db/init.sql:ro
+      - ./db/migrations:/db/migrations:ro
     depends_on:
       db:
         condition: service_healthy
