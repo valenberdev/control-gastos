@@ -117,3 +117,30 @@ BEGIN
   END LOOP;
 END
 $$;
+
+CREATE TABLE schema_migrations (
+  version TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE schema_migrations ENABLE ROW LEVEL SECURITY;
+
+DO $$
+DECLARE
+  role_name text;
+BEGIN
+  FOREACH role_name IN ARRAY ARRAY['anon', 'authenticated'] LOOP
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = role_name) THEN
+      EXECUTE format('REVOKE ALL ON schema_migrations FROM %I', role_name);
+    END IF;
+  END LOOP;
+END
+$$;
+
+INSERT INTO schema_migrations (version, name) VALUES
+  ('001', 'init.sql'),
+  ('002', 'init.sql'),
+  ('003', 'init.sql'),
+  ('004', 'init.sql'),
+  ('005', 'init.sql');
