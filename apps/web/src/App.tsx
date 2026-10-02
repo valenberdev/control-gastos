@@ -9,6 +9,9 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import { useAuth } from "./context/AuthContext";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import PublicLayout from "./components/PublicLayout";
+import RouteTitle from "./components/RouteTitle";
+import NotFound from "./pages/NotFound";
 
 export default function App() {
   const { user, loading } = useAuth();
@@ -18,11 +21,9 @@ export default function App() {
   return (
     <div className="app-shell">
       {user && <BottomNav />}
+
+      <RouteTitle />
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/registro" element={<Register />} />
-        <Route path="/olvide-mi-contrasena" element={<ForgotPassword />} />
-        <Route path="/restablecer" element={<ResetPassword />} />
         <Route
           path="/"
           element={
@@ -47,6 +48,14 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
+        <Route element={<PublicLayout />}>
+          <Route path="/login" element={<Login />} />
+          <Route path="/registro" element={<Register />} />
+          <Route path="/olvide-mi-contrasena" element={<ForgotPassword />} />
+          <Route path="/restablecer" element={<ResetPassword />} />
+          <Route path="*" element={<NotFound />} />
+        </Route>
       </Routes>
     </div>
   );

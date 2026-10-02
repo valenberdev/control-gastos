@@ -1795,3 +1795,65 @@ input[type="password"]::-ms-clear {
 .dialog-actions>* {
   flex: 1;
 }
+
+.public-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.public-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.public-shell .auth-page {
+  flex: 1;
+  min-height: 0;
+}
+
+.site-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 20px;
+  padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.site-footer p {
+  margin: 0;
+}
+
+.site-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 16px;
+}
+
+.site-footer a {
+  display: inline-block;
+  padding: 6px 0;
+  color: var(--text-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.site-footer a:hover {
+  color: var(--text);
+}
+
+a.btn-primary {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+}
+
+.app-shell:has(.bottom-nav) .site-footer {
+  padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+}
