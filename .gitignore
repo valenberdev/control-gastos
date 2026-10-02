@@ -19,3 +19,5 @@ Thumbs.db
 
 # Archivos de trabajo de las herramientas de diseño (scripts temporales, capturas, mocks)
 .impeccable/
+
+backups/
