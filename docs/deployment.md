@@ -33,24 +33,24 @@ Los archivos `.env.example` (raíz y `apps/web`) listan todas con un comentario.
 
 ### API (Render)
 
-| Variable                                | Obligatoria      | Para qué sirve                                                                                                                                           |
-| --------------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                          | Sí               | Cadena de conexión a Postgres (Session pooler de Supabase)                                                                                               |
-| `DATABASE_SSL`                          | Con Supabase     | `true` activa TLS hacia la base                                                                                                                          |
-| `DATABASE_CA_CERT`                      | No               | Certificado raíz en PEM, con los saltos de línea como `\n`. Si se define, se verifica el servidor; si falta, la conexión va cifrada pero sin verificarlo |
-| `JWT_SECRET`                            | Sí               | Firma de los tokens de sesión                                                                                                                            |
-| `INTERNAL_API_KEY`                      | Sí               | Clave que el bot manda en `x-internal-key`. Tiene que ser idéntica en el bot                                                                             |
-| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | Sí               | Claves de las notificaciones push. Sin ellas la API no arranca                                                                                           |
-| `VAPID_SUBJECT` | No | Contacto VAPID (`https:` o `mailto:`). Si falta se usa `FRONTEND_URL` cuando es https. Mejor una URL que un email personal: cualquier usuario puede leer este valor en el pedido que la API le hace a un servicio de push |
-| `FRONTEND_URL`                          | Sí en producción | Origen que acepta CORS y base de los links de recuperación. Sin barra final (la API la quita)                                                            |
-| `TRUST_PROXY_HOPS`                      | Sí en Render     | Cantidad de proxies delante de la API; ver [más abajo](#trust_proxy_hops)                                                                                |
-| `RESEND_API_KEY`                        | Para mails       | Sin ella, en producción no se envía ningún mail y se registra un error en el log                                                                         |
-| `EMAIL_FROM`                            | No               | Remitente. Por defecto `Control de Gastos <onboarding@resend.dev>`                                                                                       |
-| `NODE_ENV` | No | Las imágenes de producción ya lo fijan en `production`: los límites de intentos no se pueden desactivar y el link de recuperación nunca se imprime en el log |
-| `APP_TIMEZONE`                          | No               | Zona horaria por defecto de las cuentas nuevas (por defecto `America/Argentina/Buenos_Aires`)                                                            |
-| `PORT`                                  | No               | Render la define (10000 por defecto); fuera de Render, 3000                                                                                              |
-| `RENDER_GIT_COMMIT`                     | —                | La define Render. `/health` la informa como `commit`                                                                                                     |
-| `SERVER_TIMING` | No | `true` agrega a cada respuesta el encabezado `Server-Timing` (tiempo en la base, cantidad de consultas y conexiones nuevas del pool). Dejarlo apagado salvo para medir; ver [Medir el rendimiento](#medir-el-rendimiento) |
+| Variable                                | Obligatoria      | Para qué sirve                                                                                                                                                                                                            |
+| --------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                          | Sí               | Cadena de conexión a Postgres (Session pooler de Supabase)                                                                                                                                                                |
+| `DATABASE_SSL`                          | Con Supabase     | `true` activa TLS hacia la base                                                                                                                                                                                           |
+| `DATABASE_CA_CERT`                      | No               | Certificado raíz en PEM, con los saltos de línea como `\n`. Si se define, se verifica el servidor; si falta, la conexión va cifrada pero sin verificarlo                                                                  |
+| `JWT_SECRET`                            | Sí               | Firma de los tokens de sesión                                                                                                                                                                                             |
+| `INTERNAL_API_KEY`                      | Sí               | Clave que el bot manda en `x-internal-key`. Tiene que ser idéntica en el bot                                                                                                                                              |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | Sí               | Claves de las notificaciones push. Sin ellas la API no arranca                                                                                                                                                            |
+| `VAPID_SUBJECT`                         | No               | Contacto VAPID (`https:` o `mailto:`). Si falta se usa `FRONTEND_URL` cuando es https. Mejor una URL que un email personal: cualquier usuario puede leer este valor en el pedido que la API le hace a un servicio de push |
+| `FRONTEND_URL`                          | Sí en producción | Origen que acepta CORS y base de los links de recuperación. Sin barra final (la API la quita)                                                                                                                             |
+| `TRUST_PROXY_HOPS`                      | Sí en Render     | Cantidad de proxies delante de la API; ver [más abajo](#trust_proxy_hops)                                                                                                                                                 |
+| `RESEND_API_KEY`                        | Para mails       | Sin ella, en producción no se envía ningún mail y se registra un error en el log                                                                                                                                          |
+| `EMAIL_FROM`                            | No               | Remitente. Por defecto `Control de Gastos <onboarding@resend.dev>`                                                                                                                                                        |
+| `NODE_ENV`                              | No               | Las imágenes de producción ya lo fijan en `production`: los límites de intentos no se pueden desactivar y el link de recuperación nunca se imprime en el log                                                              |
+| `APP_TIMEZONE`                          | No               | Zona horaria por defecto de las cuentas nuevas (por defecto `America/Argentina/Buenos_Aires`)                                                                                                                             |
+| `PORT`                                  | No               | Render la define (10000 por defecto); fuera de Render, 3000                                                                                                                                                               |
+| `RENDER_GIT_COMMIT`                     | —                | La define Render. `/health` la informa como `commit`                                                                                                                                                                      |
+| `SERVER_TIMING`                         | No               | `true` agrega a cada respuesta el encabezado `Server-Timing` (tiempo en la base, cantidad de consultas y conexiones nuevas del pool). Dejarlo apagado salvo para medir; ver [Medir el rendimiento](#medir-el-rendimiento) |
 
 ### Bot (Render)
 
@@ -115,6 +115,25 @@ psql "$DATABASE_URL" -f db/init.sql
 o pegando el contenido del archivo en el **SQL Editor** del panel de Supabase.
 
 Los tests nunca se deben apuntar a esta base: preparan el esquema con `DROP SCHEMA public CASCADE`. Por eso solo aceptan bases cuyo nombre termina en `_test`.
+
+### Comprobar que la base no queda expuesta
+
+Toda tabla del esquema `public` tiene que tener RLS activa y ninguna política, y los roles públicos de Supabase (`anon` y `authenticated`) no tienen que poder leerla. Conviene comprobarlo después de cada migración que cree tablas y después de tocar la configuración de la Data API en el panel:
+
+```sql
+SELECT t.tablename,
+       has_table_privilege('anon', format('public.%I', t.tablename), 'SELECT')          AS anon_lee,
+       has_table_privilege('authenticated', format('public.%I', t.tablename), 'SELECT') AS auth_lee,
+       c.relrowsecurity                                                                  AS rls
+FROM pg_tables t
+JOIN pg_class c ON c.relname = t.tablename AND c.relnamespace = 'public'::regnamespace
+WHERE t.schemaname = 'public'
+ORDER BY t.tablename;
+
+SELECT count(*) AS politicas FROM pg_policies WHERE schemaname = 'public';
+```
+
+Esperado: `anon_lee` y `auth_lee` en `f`, `rls` en `t` y `politicas` en 0. Si algún permiso volvió a `t`, se quita con `REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon, authenticated;`. La API no se ve afectada: se conecta con el rol dueño (`postgres`), que tiene `BYPASSRLS`.
 
 ## 4. API en Render
 
@@ -243,14 +262,14 @@ curl https://<URL_DEL_BOT>/health
 
 Cuando una clave se filtra, o por higiene, se cambia en el panel de cada servicio y se vuelve a desplegar. Qué pasa con cada una:
 
-| Secreto | Dónde cambiarlo | Efecto |
-|---|---|---|
-| `JWT_SECRET` | API | Todas las sesiones dejan de valer: hay que volver a iniciar sesión |
-| `INTERNAL_API_KEY` | API **y** bot, a la vez | Hasta que ambos tengan el mismo valor, el bot no puede vincular chats ni pedir tokens |
-| `WEBHOOK_SECRET` | Bot | El bot vuelve a registrar el webhook con el valor nuevo al arrancar |
-| `TELEGRAM_BOT_TOKEN` | Bot (y `/revoke` en @BotFather) | El bot anterior deja de responder; el webhook se registra de nuevo al arrancar |
-| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` y `VITE_VAPID_PUBLIC_KEY` | API y Vercel | Las suscripciones push existentes dejan de funcionar: cada persona tiene que volver a activar las notificaciones |
-| `RESEND_API_KEY` | API | Sin efecto para los usuarios |
-| Contraseña de la base | Supabase y `DATABASE_URL` de la API | La API no conecta hasta tener la cadena nueva |
+| Secreto                                                           | Dónde cambiarlo                     | Efecto                                                                                                           |
+| ----------------------------------------------------------------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `JWT_SECRET`                                                      | API                                 | Todas las sesiones dejan de valer: hay que volver a iniciar sesión                                               |
+| `INTERNAL_API_KEY`                                                | API **y** bot, a la vez             | Hasta que ambos tengan el mismo valor, el bot no puede vincular chats ni pedir tokens                            |
+| `WEBHOOK_SECRET`                                                  | Bot                                 | El bot vuelve a registrar el webhook con el valor nuevo al arrancar                                              |
+| `TELEGRAM_BOT_TOKEN`                                              | Bot (y `/revoke` en @BotFather)     | El bot anterior deja de responder; el webhook se registra de nuevo al arrancar                                   |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` y `VITE_VAPID_PUBLIC_KEY` | API y Vercel                        | Las suscripciones push existentes dejan de funcionar: cada persona tiene que volver a activar las notificaciones |
+| `RESEND_API_KEY`                                                  | API                                 | Sin efecto para los usuarios                                                                                     |
+| Contraseña de la base                                             | Supabase y `DATABASE_URL` de la API | La API no conecta hasta tener la cadena nueva                                                                    |
 
 Usar siempre valores distintos en desarrollo y en producción: el `.env` local no debería contener ninguna clave de producción.
