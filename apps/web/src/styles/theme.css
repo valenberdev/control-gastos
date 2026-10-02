@@ -1925,3 +1925,22 @@ a.btn-primary {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+
+/* chats de Telegram vinculados (Perfil) */
+.linked-chat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--hair);
+}
+
+.linked-chat-name {
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.link-button.is-danger {
+  color: var(--expense);
+}

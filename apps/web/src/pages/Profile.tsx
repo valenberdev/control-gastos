@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import ThemeToggle from "../components/ThemeToggle";
 import TimezoneSetting from "../components/TimezoneSetting";
 import DeleteAccountSection from "../components/DeleteAccountSection";
+import TelegramLinks from "../components/TelegramLinks";
 import { Link } from "react-router";
 
 interface LinkCodeResponse {
@@ -68,6 +69,8 @@ export default function Profile() {
         <span className="mod-meta">
           Generá un código y mandaselo al bot con <code>/vincular</code>.
         </span>
+
+        <TelegramLinks />
 
         {linkCode && !expired && (
           <div className="link-code">

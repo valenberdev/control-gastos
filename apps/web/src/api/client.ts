@@ -4,11 +4,14 @@ const API_URL = (
 
 export class ApiError extends Error {
   status: number;
+  // Texto en español que devuelve la API en { error }, si lo hay.
+  serverMessage?: string;
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, serverMessage?: string) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.serverMessage = serverMessage;
   }
 }
 
@@ -39,7 +42,14 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
 
   if (!res.ok) {
-    throw new ApiError(res.status, `Error ${res.status} en ${path}`);
+    const body = (await res.json().catch(() => null)) as {
+      error?: unknown;
+    } | null;
+    throw new ApiError(
+      res.status,
+      `Error ${res.status} en ${path}`,
+      typeof body?.error === "string" ? body.error : undefined,
+    );
   }
 
   return res.json() as Promise<T>;

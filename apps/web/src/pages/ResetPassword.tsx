@@ -45,7 +45,9 @@ export default function ResetPassword() {
       if (err instanceof ApiError && err.status === 429) {
         setError("Demasiados intentos. Esperá unos minutos y probá de nuevo.");
       } else if (err instanceof ApiError && err.status === 400) {
-        setError("El link no es válido o ya venció. Pedí uno nuevo.");
+        setError(
+          err.serverMessage ?? "El link no es válido o ya venció. Pedí uno nuevo.",
+        );
       } else {
         setError("No se pudo cambiar la contraseña. Probá de nuevo.");
       }

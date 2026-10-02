@@ -28,11 +28,15 @@ export default function Register() {
       await register(email, password);
       navigate("/");
     } catch (err) {
-      setError(
-        err instanceof ApiError && err.status === 429
-          ? "Demasiados intentos. Esperá un rato y probá de nuevo."
-          : "No se pudo crear la cuenta. Puede que ese email ya esté registrado.",
-      );
+      if (err instanceof ApiError && err.status === 429) {
+        setError("Demasiados intentos. Esperá un rato y probá de nuevo.");
+      } else if (err instanceof ApiError && err.status === 400 && err.serverMessage) {
+        setError(err.serverMessage);
+      } else {
+        setError(
+          "No se pudo crear la cuenta. Puede que ese email ya esté registrado.",
+        );
+      }
     } finally {
       setSubmitting(false);
     }
