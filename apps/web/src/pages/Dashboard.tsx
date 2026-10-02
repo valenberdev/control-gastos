@@ -17,9 +17,8 @@ import ConnectionNotice from "../components/ConnectionNotice";
 import TransactionsList from "../components/TransactionsList";
 import MonthSwitcher from "../components/MonthSwitcher";
 import AddMovementModal from "../components/AddMovementModal";
+import InstallPrompt from "../components/InstallPrompt";
 
-// Recharts es más de la mitad del JavaScript de la app: se baja aparte, mientras
-// el resto del dashboard ya se muestra.
 const loadTrendChart = () => import("../components/TrendChart");
 const loadCategoryDonut = () => import("../components/CategoryDonut");
 const TrendChart = lazy(loadTrendChart);
@@ -43,7 +42,6 @@ export default function Dashboard() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [incomes, setIncomes] = useState<Income[]>([]);
-  // true cuando los movimientos del mes mostrado ya llegaron.
   const [ready, setReady] = useState(false);
   const [error, setError] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -126,8 +124,6 @@ export default function Dashboard() {
 
   useAutoRefresh(refreshAll);
 
-  // Si falló, reintenta cada pocos segundos: con el servidor gratuito dormido la
-  // primera respuesta tarda casi un minuto y el usuario no debería tener que recargar.
   useRetryWhile(error, () => {
     if (categories.length === 0) fetchCategories();
     refreshAll();
@@ -208,6 +204,8 @@ export default function Dashboard() {
           <path d="M12 5v14M5 12h14" />
         </svg>
       </button>
+
+      <InstallPrompt />
 
       <AddMovementModal
         open={modalOpen}

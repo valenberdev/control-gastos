@@ -6,6 +6,7 @@ import TimezoneSetting from "../components/TimezoneSetting";
 import DeleteAccountSection from "../components/DeleteAccountSection";
 import TelegramLinks from "../components/TelegramLinks";
 import { Link } from "react-router";
+import InstallSection from "../components/InstallSection";
 
 interface LinkCodeResponse {
   code: string;
@@ -101,6 +102,8 @@ export default function Profile() {
       <button onClick={logout} className="btn-secondary">
         Cerrar sesión
       </button>
+
+      <InstallSection />
 
       <DeleteAccountSection />
 

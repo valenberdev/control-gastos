@@ -9,6 +9,7 @@ import { BrowserRouter } from "react-router";
 import App from "./App";
 import { AuthProvider } from "./context/AuthContext";
 import "./styles/theme.css";
+import "./lib/installPrompt";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
