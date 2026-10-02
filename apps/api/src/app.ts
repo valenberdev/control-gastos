@@ -3,6 +3,7 @@ import cors from "cors";
 import helmet from "helmet";
 import type { NextFunction, Request, Response } from "express";
 import { logError } from "./lib/logger.js";
+import { SERVER_TIMING_ENABLED, serverTiming } from "./lib/serverTiming.js";
 import { requireAuth } from "./middleware/requireAuth.js";
 import { authRouter } from "./routes/auth.js";
 import { categoriesRouter } from "./routes/categories.js";
@@ -45,6 +46,7 @@ app.use(
   }),
 );
 app.use(cors({ origin: frontendUrl }));
+if (SERVER_TIMING_ENABLED) app.use(serverTiming(frontendUrl));
 app.use(express.json());
 
 app.get("/health", (_req, res) => {

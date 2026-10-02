@@ -50,6 +50,7 @@ Los archivos `.env.example` (raíz y `apps/web`) listan todas con un comentario.
 | `APP_TIMEZONE`                          | No               | Zona horaria por defecto de las cuentas nuevas (por defecto `America/Argentina/Buenos_Aires`)                                                            |
 | `PORT`                                  | No               | Render la define (10000 por defecto); fuera de Render, 3000                                                                                              |
 | `RENDER_GIT_COMMIT`                     | —                | La define Render. `/health` la informa como `commit`                                                                                                     |
+| `SERVER_TIMING` | No | `true` agrega a cada respuesta el encabezado `Server-Timing` (tiempo en la base, cantidad de consultas y conexiones nuevas del pool). Dejarlo apagado salvo para medir; ver [Medir el rendimiento](#medir-el-rendimiento) |
 
 ### Bot (Render)
 
@@ -138,6 +139,22 @@ En Render el valor medido fue `3` (octubre de 2026): `X-Forwarded-For` traía la
 ### Plan gratuito de Render
 
 El servicio se duerme tras 15 minutos sin tráfico y el primer pedido siguiente puede tardar cerca de un minuto. Además, Render gratuito bloquea el tráfico saliente a los puertos SMTP, por eso los mails salen por la API HTTPS de Resend y no por SMTP.
+
+### Medir el rendimiento
+
+Con `SERVER_TIMING=true` cada respuesta de la API trae un encabezado como:
+
+```
+Server-Timing: db;dur=9.8;desc="consultas=2", conn;desc="nuevas=0", total;dur=14.1
+```
+
+- `db`: milisegundos acumulados en consultas a Postgres y cuántas fueron.
+- `conn`: conexiones nuevas que abrió el pool durante el pedido (con varios pedidos simultáneos es una cota superior). Debería ser `0` salvo en el primer pedido tras un reinicio o tras 2 minutos sin tráfico.
+- `total`: tiempo dentro de Express.
+
+Se ve en las DevTools, pestaña Network > Timing, y la API manda `Timing-Allow-Origin` con `FRONTEND_URL` para que también lo lea `PerformanceResourceTiming`. Es una variable de entorno: activarla, redesplegar, medir y volver a quitarla. No expone datos de usuarios, pero tampoco hace falta en el uso normal.
+
+El pool de conexiones mantiene las conexiones ociosas 2 minutos (`idleTimeoutMillis`, por defecto serían 10 s) y las renueva a los 30 minutos: sin eso, el refresco del dashboard cada 20 s reabría conexiones TLS contra Supabase en cada ciclo.
 
 ## 5. Bot en Render
 
