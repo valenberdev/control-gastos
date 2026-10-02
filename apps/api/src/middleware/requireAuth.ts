@@ -23,6 +23,7 @@ const linkedChats = new Map<string, number>();
 
 export function forgetUser(userId: string): void {
   versions.delete(userId);
+  pendingVersions.delete(userId);
   for (const key of linkedChats.keys()) {
     if (key.startsWith(`${userId}:`)) linkedChats.delete(key);
   }
@@ -32,6 +33,10 @@ export function forgetChat(userId: string, chatId: string): void {
   linkedChats.delete(`${userId}:${chatId}`);
 }
 
+// Consultas en curso por usuario: el dashboard hace 4 o 5 pedidos a la vez y, con la
+// caché vacía, todos preguntaban lo mismo a la base.
+const pendingVersions = new Map<string, Promise<number | null>>();
+
 // Versión de sesión vigente de la cuenta, o null si la cuenta ya no existe.
 async function sessionVersion(userId: string): Promise<number | null> {
   const cached = versions.get(userId);
@@ -39,19 +44,27 @@ async function sessionVersion(userId: string): Promise<number | null> {
     return cached.version;
   }
 
-  const result = await pool.query(
-    "SELECT token_version FROM users WHERE id = $1",
-    [userId],
-  );
-  if (result.rowCount === 0) {
-    versions.delete(userId);
-    return null;
-  }
+  const pending = pendingVersions.get(userId);
+  if (pending) return pending;
 
-  const version = Number(result.rows[0].token_version);
-  if (versions.size >= MAX_CACHED) versions.clear();
-  versions.set(userId, { version, checkedAt: Date.now() });
-  return version;
+  const lookup = (async () => {
+    const result = await pool.query(
+      "SELECT token_version FROM users WHERE id = $1",
+      [userId],
+    );
+    if (result.rowCount === 0) {
+      versions.delete(userId);
+      return null;
+    }
+
+    const version = Number(result.rows[0].token_version);
+    if (versions.size >= MAX_CACHED) versions.clear();
+    versions.set(userId, { version, checkedAt: Date.now() });
+    return version;
+  })().finally(() => pendingVersions.delete(userId));
+
+  pendingVersions.set(userId, lookup);
+  return lookup;
 }
 
 async function chatIsLinked(userId: string, chatId: string): Promise<boolean> {
