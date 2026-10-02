@@ -12,6 +12,8 @@ import ResetPassword from "./pages/ResetPassword";
 import PublicLayout from "./components/PublicLayout";
 import RouteTitle from "./components/RouteTitle";
 import NotFound from "./pages/NotFound";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
 
 export default function App() {
   const { user, loading } = useAuth();
@@ -54,6 +56,8 @@ export default function App() {
           <Route path="/registro" element={<Register />} />
           <Route path="/olvide-mi-contrasena" element={<ForgotPassword />} />
           <Route path="/restablecer" element={<ResetPassword />} />
+          <Route path="/privacidad" element={<Privacy />} />
+          <Route path="/terminos" element={<Terms />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>

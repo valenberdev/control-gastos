@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import ThemeToggle from "../components/ThemeToggle";
 import TimezoneSetting from "../components/TimezoneSetting";
 import DeleteAccountSection from "../components/DeleteAccountSection";
+import { Link } from "react-router";
 
 interface LinkCodeResponse {
   code: string;
@@ -99,6 +100,11 @@ export default function Profile() {
       </button>
 
       <DeleteAccountSection />
+
+      <nav className="profile-legal" aria-label="Información legal">
+        <Link to="/privacidad">Política de privacidad</Link>
+        <Link to="/terminos">Términos y condiciones</Link>
+      </nav>
     </div>
   );
 }

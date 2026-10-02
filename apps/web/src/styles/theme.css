@@ -1,4 +1,3 @@
-
 :root {
   --bg-base: #e9edf7;
   --orb-1: 112, 160, 255;
@@ -1855,4 +1854,74 @@ a.btn-primary {
 
 .app-shell:has(.bottom-nav) .site-footer {
   padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Páginas legales */
+.legal-page {
+  flex: 1;
+  padding: 24px 16px 40px;
+}
+
+.legal {
+  max-width: 720px;
+  margin: 0 auto;
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.legal h1 {
+  font-size: 26px;
+  margin: 8px 0 4px;
+}
+
+.legal h2 {
+  font-size: 18px;
+  margin: 28px 0 8px;
+}
+
+.legal p,
+.legal ul {
+  margin: 0 0 12px;
+}
+
+.legal ul {
+  padding-left: 20px;
+}
+
+.legal li {
+  margin-bottom: 6px;
+}
+
+.legal a {
+  color: var(--accent);
+}
+
+.legal-updated {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.legal-back {
+  display: inline-block;
+  padding: 6px 0;
+  color: var(--text-muted);
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.profile-legal {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 16px;
+  padding: 8px 0;
+  font-size: 13px;
+}
+
+.profile-legal a {
+  display: inline-block;
+  padding: 6px 0;
+  color: var(--text-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
