@@ -1,27 +1,49 @@
-# Actualizaciones automáticas de dependencias, imágenes base y acciones de CI.
 version: 2
 updates:
-  - package-ecosystem: npm
-    directory: /apps/api
-    schedule:
-      interval: weekly
-  - package-ecosystem: npm
-    directory: /apps/bot
-    schedule:
-      interval: weekly
-  - package-ecosystem: npm
-    directory: /apps/web
-    schedule:
-      interval: weekly
-  - package-ecosystem: docker
-    directory: /apps/api
-    schedule:
-      interval: weekly
-  - package-ecosystem: docker
-    directory: /apps/bot
-    schedule:
-      interval: weekly
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    groups:
+      acciones:
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /apps/api
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      minor-y-patch:
+        update-types: ["minor", "patch"]
+    ignore:
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: npm
+    directory: /apps/bot
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      minor-y-patch:
+        update-types: ["minor", "patch"]
+    ignore:
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: npm
+    directory: /apps/web
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      minor-y-patch:
+        update-types: ["minor", "patch"]
+    ignore:
+      - dependency-name: "vite"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@vitejs/plugin-react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
