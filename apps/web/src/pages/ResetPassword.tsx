@@ -46,7 +46,8 @@ export default function ResetPassword() {
         setError("Demasiados intentos. Esperá unos minutos y probá de nuevo.");
       } else if (err instanceof ApiError && err.status === 400) {
         setError(
-          err.serverMessage ?? "El link no es válido o ya venció. Pedí uno nuevo.",
+          err.serverMessage ??
+            "El link no es válido o ya venció. Pedí uno nuevo.",
         );
       } else {
         setError("No se pudo cambiar la contraseña. Probá de nuevo.");
@@ -65,7 +66,12 @@ export default function ResetPassword() {
           <>
             <div className="auth-head">
               <h1>Contraseña actualizada</h1>
-              <span>Ya podés iniciar sesión con tu contraseña nueva.</span>
+              <span>
+                Ya podés iniciar sesión con tu contraseña nueva. Por seguridad
+                se cerraron las otras sesiones, se desvinculó Telegram y se
+                desactivaron las notificaciones: volvé a activarlos desde
+                Perfil.
+              </span>
             </div>
             <button
               type="button"
