@@ -3,8 +3,6 @@ import type { Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
-// Abre la conexión con la API (DNS + TCP + TLS) mientras el navegador todavía baja el
-// JavaScript. Solo si VITE_API_URL está definida: en desarrollo no hace falta.
 function preconnectApi(apiUrl: string | undefined): Plugin {
   return {
     name: "preconnect-api",
@@ -30,7 +28,6 @@ function preconnectApi(apiUrl: string | undefined): Plugin {
 export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
-    // loadEnv también incluye las variables del entorno (las de Vercel) con ese prefijo.
     preconnectApi(loadEnv(mode, ".", "VITE_").VITE_API_URL),
     VitePWA({
       strategies: "injectManifest",
@@ -62,6 +59,7 @@ export default defineConfig(({ mode }) => ({
       },
       injectManifest: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
+        globIgnores: ["og-image.png"],
       },
     }),
   ],
