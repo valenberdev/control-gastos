@@ -47,8 +47,10 @@ Capturas de la app con datos de ejemplo.
 - **Resumen:** saldo total, tendencia por día, semana o mes (14, 8 y 6 períodos), gasto por categoría del mes elegido y últimos movimientos. Se actualiza solo cada 20 segundos mientras la pestaña está visible.
 - **Zona horaria por usuario:** define qué día es «hoy» al cargar un movimiento.
 - **Bot de Telegram:** acepta `500 comida`, `1.500 super` (el punto es separador de miles), `+50000 sueldo` para ingresos y `/saldo`. Si el gasto no trae una categoría reconocida, pregunta con botones. Solo responde en chats privados.
+- **Chats vinculados:** en Perfil se ven los chats de Telegram vinculados y se pueden desvincular.
 - **Notificaciones push** al registrar un gasto o un ingreso, desde la web o desde el bot.
 - **PWA:** instalable, con service worker propio que guarda en caché los archivos de la aplicación (los datos no están disponibles sin conexión). Tema claro y oscuro.
+- **Guía de instalación:** una ventana en Inicio y una sección en Perfil explican cómo instalar la app según el navegador y el sistema; la ventana se puede posponer o descartar.
 - **Eliminar la cuenta** desde Perfil, con confirmación de contraseña: borra también los movimientos, el vínculo con Telegram y las suscripciones push.
 - **Páginas legales** (privacidad y términos), enlazadas desde el footer y el Perfil.
 
@@ -85,7 +87,7 @@ flowchart LR
 | Capa | Tecnología |
 |---|---|
 | Frontend | React 19, Vite 5, TypeScript, react-router 7, Recharts 2, vite-plugin-pwa (service worker propio con Workbox `injectManifest`) |
-| API | Node 24, Express 4, `pg`, TypeScript, `bcryptjs`, `jsonwebtoken`, `express-rate-limit`, `web-push` |
+| API | Node 24, Express 4, `pg`, TypeScript, `bcryptjs`, `jsonwebtoken`, `express-rate-limit`, `helmet`, `web-push` |
 | Bot | grammY, TypeScript |
 | Base de datos | PostgreSQL (16 en local y en CI; Supabase en producción) |
 | Tests | Vitest 5 (API y bot), supertest (API) |
@@ -99,9 +101,9 @@ flowchart LR
 - **El saldo no se guarda, se calcula en SQL con `NUMERIC(12,2)`.** Evita errores de coma flotante y un contador que se desincronice. Antes se restaba en JavaScript (corregido en `c2733a8`). Costo: una suma por consulta, apoyada en el índice por usuario y fecha.
 - **Fechas como `DATE`, sin hora.** La fecha de cada movimiento se calcula en SQL con la zona horaria del usuario y la API devuelve los `DATE` como texto `AAAA-MM-DD` (`apps/api/src/db/pool.ts`) para evitar corrimientos de día al serializar.
 - **Filtro por mes con rango de fechas** en lugar de `date_trunc`, para que Postgres pueda usar el índice `(user_id, fecha)`: aplicarle una función a la columna lo impide.
-- **Autenticación propia con `bcryptjs` y JWT.** `bcryptjs` es JavaScript puro: no necesita compilar módulos nativos en la imagen Alpine (costo: es más lento que `bcrypt`). El JWT (7 días) vive en `localStorage` y no en una cookie `httpOnly` porque frontend y API están en dominios distintos. Costo: un XSS podría leerlo y la sesión no se revoca.
+- **Autenticación propia con `bcryptjs` y JWT.** `bcryptjs` es JavaScript puro: no necesita compilar módulos nativos en la imagen Alpine (costo: es más lento que `bcrypt`). El JWT (7 días) vive en `localStorage` y no en una cookie `httpOnly` porque frontend y API están en dominios distintos. Costo: un XSS podría leerlo (de ahí la CSP estricta). Las sesiones son revocables: el token lleva la versión de sesión de la cuenta y la API la compara con la base (con un caché de 30 segundos), así que restablecer la contraseña o eliminar la cuenta invalida todos los tokens emitidos. Costo: cerrar sesión solo borra el token del navegador.
 - **Recuperación de contraseña sin filtrar qué cuentas existen.** Token aleatorio de un solo uso (solo se guarda su hash), vence a la hora, el link lleva el token después del `#` (el navegador no lo envía al servidor) y la respuesta es idéntica exista o no la cuenta.
-- **Bot autenticado con clave interna.** El bot se identifica ante la API con `x-internal-key` y obtiene un JWT por cada chat vinculado. El vínculo es un código de 6 dígitos de un solo uso. Descarta los `update_id` repetidos porque Telegram reenvía si la API tarda por un *cold start*.
+- **Bot autenticado con clave interna.** El bot se identifica ante la API con `x-internal-key` y obtiene un JWT de 15 minutos por cada chat vinculado (lo reutiliza 10 minutos). El vínculo es un código de 6 dígitos de un solo uso. Descarta los `update_id` repetidos porque Telegram reenvía si la API tarda por un *cold start*.
 - **Express detrás de los proxies de Render.** La cantidad de saltos de confianza (`TRUST_PROXY_HOPS`) se midió de forma empírica con una ruta temporal, ya eliminada. Sin ese ajuste, todos los clientes compartirían la misma IP en los límites de intentos.
 - **Session pooler de Supabase.** La conexión directa es solo IPv6 y Render no soporta IPv6 saliente.
 - **Mails por la API HTTPS de Resend.** El plan gratuito de Render bloquea el tráfico saliente a los puertos SMTP.
@@ -130,6 +132,8 @@ Lo que está implementado:
   | Canjear código de Telegram | 5 fallos cada 15 min por chat |
   | Pedir un token para un chat (bot) | 30 cada 15 min por chat; 600 cada 15 min en total |
   | Suscribir notificaciones push | 30 cada 15 min por cuenta |
+| Eliminar la cuenta | 5 fallos cada 15 min por cuenta |
+| `GET /health/db` | 30 por minuto por IP |
 
 - Endpoints del bot protegidos con una clave interna comparada en tiempo constante (`crypto.timingSafeEqual`). Si la clave no está configurada, nadie entra. Con esa clave la API entrega al bot tokens de 15 minutos atados a un chat: dejan de valer apenas el chat se desvincula, lo que se puede hacer desde Perfil.
 - Webhook de Telegram validado con token secreto.
@@ -139,20 +143,20 @@ Lo que está implementado:
 - Encabezados de seguridad: `helmet` en la API (sin `X-Powered-By`) y, en la web, una política CSP estricta (sin scripts inline ni de terceros), `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` y `nosniff` desde `apps/web/vercel.json`. Los errores de la API son siempre JSON genérico, sin trazas.
 - Los logs no incluyen el detalle de los errores de Postgres (puede traer datos de la fila) ni los endpoints de las suscripciones push.
 - Las imágenes de producción corren como usuario `node` con `NODE_ENV=production`; las acciones de CI están fijadas por SHA y Dependabot mantiene al día las dependencias. Para reportar una vulnerabilidad, ver [SECURITY.md](SECURITY.md).
-- La Data API automática de Supabase está desactivada: la única puerta a los datos es la API propia, con su autenticación y sus límites. Como segunda barrera, todas las tablas tienen RLS activo sin políticas (`db/migrations/002_habilitar_rls.sql`).
+- Todas las tablas tienen RLS activa, sin políticas y sin permisos para los roles públicos de Supabase (`anon` y `authenticated`): aunque la Data API estuviera habilitada, no puede leer ni escribir nada. La única puerta a los datos es la API propia.
 - Los `.env` están en `.gitignore`; las claves viven solo en las variables de entorno de cada servicio.
-- Cada pedido autenticado verifica que la cuenta siga existiendo (con un cache de 30 segundos): al eliminar una cuenta, sus sesiones dejan de valer en segundos y no a los 7 días.
+- Cada pedido autenticado comprueba contra la base (con un caché de 30 segundos) que la cuenta exista y que la versión de sesión del token siga vigente; con los tokens del bot, también que el chat siga vinculado. Al eliminar la cuenta, restablecer la contraseña o desvincular un chat, esos tokens dejan de valer en segundos y no a los 7 días.
 - Sin cookies ni analíticas; la tipografía se sirve desde el propio dominio.
 
 Lo que **no** está: doble factor de autenticación ni verificación de email. Ver [Limitaciones](#limitaciones-conocidas-y-próximos-pasos).
 
 ## Tests y CI
 
-**Qué se prueba.** La API tiene tests de integración contra una base PostgreSQL real: registro, login y sesiones (incluidos tokens vencidos o firmados con otro secreto), zona horaria, aislamiento entre usuarios, gastos e ingresos (alta, edición, borrado, bordes de mes, «hoy» según la zona de cada usuario), saldo y tendencia, recuperación de contraseña (un solo uso, vencimiento, concurrencia), vínculo de Telegram y límites de intentos. El envío de mails se simula. El bot tiene tests del parser de mensajes (montos, categorías, ingresos, entradas inválidas). El frontend no tiene tests: el CI solo comprueba tipos y que compile.
+**Qué se prueba.** La API tiene tests de integración contra una base PostgreSQL real: registro, login y sesiones (incluidos tokens vencidos o firmados con otro secreto), zona horaria, aislamiento entre usuarios, gastos e ingresos (alta, edición, borrado, bordes de mes, «hoy» según la zona de cada usuario), saldo y tendencia, recuperación de contraseña (un solo uso, vencimiento, concurrencia), vínculo de Telegram, límites de intentos, encabezados de seguridad y errores genéricos, suscripciones push, que los logs no incluyan datos sensibles, el registro de migraciones y las rutas `/health` y `/health/db`. El envío de mails se simula. El bot tiene tests del parser de mensajes (montos, categorías, ingresos, entradas inválidas). El frontend no tiene tests: el CI solo comprueba tipos y que compile.
 
 **Cómo correrlos.** Ver [Tests](#tests) más abajo.
 
-**Qué corre el workflow** (`.github/workflows/ci.yml`, en cada push a `main` y en cada pull request):
+**Qué corre el workflow** (`.github/workflows/ci.yml`, en cada push a `main`, en cada pull request y a mano):
 
 | Job | Qué hace |
 |---|---|
@@ -160,6 +164,16 @@ Lo que **no** está: doble factor de autenticación ni verificación de email. V
 | `bot` | `npm ci`, `npm run build` y `npm test` |
 | `web` | `npm ci`, `npm run typecheck` (incluye el service worker) y `npm run build` |
 | `docker` | Construye las imágenes de producción de la API y del bot, sin publicarlas |
+| `deploy` | Solo en `main` y si pasaron los cuatro anteriores: avisa a Render con un *deploy hook* y redespliega únicamente el servicio cuyo código cambió (`apps/api` o `apps/bot`) |
+
+Un segundo workflow, `.github/workflows/keep-alive.yml`, consulta `GET /health/db` de la API los lunes y jueves (y a mano) para mantener activa la demo.
+
+## Operación
+
+- **Migraciones.** `db/migrations` guarda los cambios de esquema y la tabla `schema_migrations` registra cuáles se aplicaron. La API consulta ese registro al arrancar y no inicia si falta alguna. `bash db/migrate.sh` aplica las pendientes (ver [docs/deployment.md](docs/deployment.md#aplicar-el-esquema)).
+- **Respaldos.** `bash db/backup.sh` genera un `pg_dump` comprimido en `backups/` (ignorada por git), lo restaura en un PostgreSQL descartable y compara las cantidades de filas. Es manual y borra los respaldos de más de 90 días.
+- **Despliegue.** Cuando el CI pasa en `main`, el job `deploy` avisa a Render con *deploy hooks* y redespliega solo la API o el bot, según cuál haya cambiado. Por eso las migraciones se aplican **antes** de hacer el push.
+- **Salud.** `GET /health` no toca la base; `GET /health/db` hace una consulta real. El workflow `keep-alive.yml` consulta esta última los lunes y jueves.
 
 ## Correrlo en local
 
@@ -179,10 +193,12 @@ El compose levanta tres servicios: `db` (PostgreSQL 16, expuesto en `127.0.0.1:5
 
 > **Recarga en caliente en Windows.** En Docker Desktop para Windows, `tsx watch` puede no detectar los cambios de archivos montados desde el disco de Windows. Si un cambio en `api` o `bot` no se refleja, reinicia el servicio con `docker compose restart api`. Si cambias dependencias, usa `docker compose up --build -V` para renovar el volumen de `node_modules`.
 
+> **Migraciones en una base local existente.** `db/init.sql` solo se carga al crear el volumen. Si al actualizar el repositorio la API se detiene con «A la base le faltan las migraciones…», recrea la base local con `docker compose down -v` (borra los datos locales), vuelve a levantarla y crea de nuevo la base de pruebas (ver [Tests](#tests)).
+
 ```bash
 # 3. Frontend (otra terminal)
 cd apps/web
-cp .env.example .env     # VITE_API_URL=http://localhost:3000 y VITE_VAPID_PUBLIC_KEY
+cp .env.example .env     # VITE_API_URL (vacío usa http://localhost:3000) y VITE_VAPID_PUBLIC_KEY
 npm ci
 npm run dev              # http://localhost:5173
 ```
@@ -211,7 +227,8 @@ Las rutas marcadas «Sesión» exigen `Authorization: Bearer <JWT>`; «Clave int
 
 | Método | Ruta | Acceso |
 |---|---|---|
-| GET | `/health` | Pública (estado y commit desplegado) |
+| GET | `/health` | Pública (estado y commit desplegado; no toca la base) |
+| GET | `/health/db` | Pública (hace una consulta real a la base; 30 por minuto por IP) |
 | POST | `/auth/register`, `/auth/login` | Pública |
 | POST | `/auth/forgot-password`, `/auth/reset-password` | Pública |
 | GET | `/auth/me` | Sesión |
@@ -235,12 +252,15 @@ apps/
   api/        API REST. src/app.ts arma Express; src/index.ts la arranca
     src/      routes/ middleware/ services/ lib/ db/ config/ test/
   bot/        Bot de Telegram (grammY). src/parser/ interpreta los mensajes
-  web/        PWA (React + Vite). src/ pages/ components/ hooks/ context/ lib/ api/ y sw.ts
+  web/        PWA (React + Vite). src/ pages/ components/ hooks/ context/ lib/ api/ styles/ y sw.ts
 db/
-  init.sql    Esquema completo y categorías iniciales
-  migrations/ Scripts para bases creadas antes de cada cambio
-docs/         Guía de despliegue
-.github/workflows/ci.yml
+  init.sql    Esquema completo, categorías iniciales y registro de migraciones
+  migrations/ Scripts numerados para bases creadas antes de cada cambio
+  migrate.sh  Aplica las migraciones pendientes a una base existente
+  backup.sh   Respaldo con verificación de restauración (escribe en backups/, ignorada por git)
+docs/         Guía de despliegue y capturas
+.github/workflows/ci.yml          Tests, build y despliegue
+.github/workflows/keep-alive.yml  Consulta programada a /health/db
 .github/dependabot.yml  Actualizaciones automáticas de dependencias
 SECURITY.md           Cómo reportar una vulnerabilidad
 .nvmrc                Versión de Node (24)
@@ -256,11 +276,11 @@ PRODUCT.md, DESIGN.md Documentos de producto y de diseño del frontend
 - La conexión a la base va cifrada pero sin verificar el certificado del servidor (se puede activar con `DATABASE_CA_CERT`).
 - La recuperación de contraseña por email no llega a cualquier persona hasta verificar un dominio en Resend.
 - No hay verificación de email.
-- No se configuraron respaldos propios de la base de datos.
+- Los respaldos de la base son manuales: se hacen con `bash db/backup.sh` (ver [docs/deployment.md](docs/deployment.md#respaldos)) y no hay ninguno programado.
 - No hay login con Google, presupuestos, gastos recurrentes ni exportación a CSV. La tabla `recurring_expenses` y la columna `monthly_budget` existen en el esquema, pero ninguna funcionalidad las usa.
 - Las categorías son fijas y compartidas por todas las cuentas, y la interfaz muestra los montos en pesos argentinos.
 - No hay tests del frontend ni de la entrega real de push, del webhook del bot o de Resend.
-- Las migraciones se aplican a mano y en orden; no hay una herramienta que registre cuáles se corrieron.
+- Las migraciones no corren solas durante el despliegue: se aplican con `bash db/migrate.sh` desde una máquina con Docker. La tabla `schema_migrations` registra cuáles se aplicaron y la API se niega a arrancar si le falta alguna.
 - La política de privacidad y los términos son un borrador sin revisión legal.
 
 Próximos pasos posibles: verificar un dominio en Resend, verificación de email, un botón para cerrar todas las sesiones, guardar los límites de intentos fuera de la memoria del proceso y agregar tests del frontend.
