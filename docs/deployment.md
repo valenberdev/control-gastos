@@ -8,7 +8,7 @@ La infraestructura de la demo es toda de planes gratuitos (Vercel Hobby, Render 
 
 | Pieza           | Dónde corre                   | Qué se despliega                       |
 | --------------- | ----------------------------- | -------------------------------------- |
-| Base de datos   | Supabase (PostgreSQL)         | `db/init.sql` aplicado a mano          |
+| Base de datos   | Supabase (PostgreSQL)         | `db/init.sql` (base nueva) o `db/migrate.sh` (base existente), aplicados a mano |
 | API             | Render (servicio web, Docker) | `apps/api`, imagen `Dockerfile.prod`   |
 | Bot de Telegram | Render (servicio web, Docker) | `apps/bot`, imagen `Dockerfile.prod`   |
 | Frontend (PWA)  | Vercel                        | `apps/web`                             |
@@ -95,27 +95,19 @@ npx web-push generate-vapid-keys
 
 Las migraciones son scripts SQL numerados en `db/migrations`. La tabla `schema_migrations` registra cuáles se aplicaron, y **la API no arranca si a la base le falta alguna de las que su código necesita** (la lista está en `apps/api/src/db/schema.ts`): el despliegue falla y Render deja en vivo la versión anterior. Por eso las migraciones se aplican **antes** de desplegar el código que las usa.
 
-- **Base nueva:** ejecutar `db/init.sql` completo, una sola vez. Ya incluye todas las migraciones y las registra. No es idempotente: correrlo dos veces sobre la misma base falla.
+- **Base nueva:** ejecutar `db/init.sql` completo, una sola vez, con `psql "$DATABASE_URL" -f db/init.sql` o pegando el contenido en el **SQL Editor** del panel de Supabase. Ya incluye todas las migraciones y las registra. No es idempotente (usa `CREATE TABLE` sin `IF NOT EXISTS`): correrlo dos veces sobre la misma base falla.
 - **Base existente:** `bash db/migrate.sh`. Pide la cadena de conexión (no la guarda), muestra las migraciones pendientes y las aplica en orden. Necesita el servicio `db` de docker compose levantado, porque usa su `psql`.
 - **Primera vez en una base anterior al registro:** aplicar a mano la migración 005, que verifica que de la 001 a la 004 estén aplicadas y crea el registro: `docker compose exec -T -e CONN="$CONN" db sh -c 'psql "$CONN" -v ON_ERROR_STOP=1' < db/migrations/005_registro_de_migraciones.sql`.
 
+Qué hace cada migración:
+
+- `001_recuperacion_de_contrasena.sql`: crea `password_resets`.
+- `002_habilitar_rls.sql`: activa RLS (sin políticas) en las nueve tablas y, en Supabase, quita los privilegios de `anon` y `authenticated`. La API se conecta con el rol dueño de las tablas (`postgres`), que no se ve afectado. Después del cambio, el Security Advisor de Supabase no debería listar tablas sin RLS.
+- `003_version_de_sesion.sql`: agrega `users.token_version`. **Aplicarla antes de desplegar la versión de la API que la usa:** si el código nuevo corre sin la columna, el login y las sesiones fallan.
+- `004_limpiar_suscripciones_push.sql`: borra las suscripciones push guardadas cuyo endpoint no sea de un servicio de notificaciones de navegadores (la API nueva ya solo acepta esos). Es de una sola vez; quien pierda su suscripción vuelve a activar las notificaciones desde la app.
+- `005_registro_de_migraciones.sql`: crea `schema_migrations` (con RLS y sin privilegios para `anon` y `authenticated`) y registra de la 001 a la 005.
+
 Cada migración nueva lleva un número de tres dígitos (`006_...sql`), se agrega a `REQUIRED_MIGRATIONS` y un test comprueba que la lista coincida con los archivos.
-
-- **Base existente:** aplicar, en orden, las migraciones que falten:
-  - `db/migrations/002_habilitar_rls.sql`: activa RLS (sin políticas) en las nueve tablas y, en Supabase, quita los privilegios de `anon` y `authenticated`. La API se conecta con el rol dueño de las tablas (`postgres`), que no se ve afectado. Después del cambio, el Security Advisor de Supabase no debería listar tablas sin RLS.
-  - `db/migrations/003_version_de_sesion.sql`: agrega `users.token_version`. **Aplicarla antes de desplegar la versión de la API que la usa:** si el código nuevo corre sin la columna, el login y las sesiones fallan.
-  - `db/migrations/004_limpiar_suscripciones_push.sql`: borra las suscripciones push guardadas cuyo endpoint no sea de un servicio de notificaciones de navegadores (la API nueva ya solo acepta esos). Es de una sola vez; quien pierda su suscripción vuelve a activar las notificaciones desde la app.
-
-`init.sql` no es idempotente (usa `CREATE TABLE` sin `IF NOT EXISTS`): correrlo dos veces sobre la misma base falla.
-
-Dos formas de ejecutarlo:
-
-```bash
-# Con psql, usando la cadena del Session pooler
-psql "$DATABASE_URL" -f db/init.sql
-```
-
-o pegando el contenido del archivo en el **SQL Editor** del panel de Supabase.
 
 Los tests nunca se deben apuntar a esta base: preparan el esquema con `DROP SCHEMA public CASCADE`. Por eso solo aceptan bases cuyo nombre termina en `_test`.
 
@@ -137,6 +129,17 @@ SELECT count(*) AS politicas FROM pg_policies WHERE schemaname = 'public';
 ```
 
 Esperado: `anon_lee` y `auth_lee` en `f`, `rls` en `t` y `politicas` en 0. Si algún permiso volvió a `t`, se quita con `REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon, authenticated;`. La API no se ve afectada: se conecta con el rol dueño (`postgres`), que tiene `BYPASSRLS`.
+
+### Respaldos
+
+Los respaldos son manuales: `bash db/backup.sh`. Requiere Docker y la cadena del Session pooler, que se pide por la terminal sin mostrarla y no se guarda. El script:
+
+1. Detecta la versión mayor del servidor y usa la imagen `postgres:<versión>-alpine` para el `pg_dump`.
+2. Vuelca el esquema `public` en SQL plano y lo comprime en `backups/control-gastos-AAAAMMDD-HHMMSS.sql.gz` (carpeta ignorada por git).
+3. Restaura el volcado en un PostgreSQL descartable y compara las cantidades de filas de `users`, `expenses`, `incomes`, `categories`, `recurring_expenses`, `telegram_links`, `push_subscriptions` y `schema_migrations` con las de la base real. Si alguien usó la app durante el respaldo, las cantidades pueden diferir: repetirlo.
+4. Al terminar, borra los respaldos de más de 90 días.
+
+No hay ninguna ejecución programada: si nadie lo corre, no hay respaldos. El archivo contiene todos los datos de las cuentas (emails, hashes de contraseña, movimientos y suscripciones push): guardarlo en un lugar de acceso restringido.
 
 ## 4. API en Render
 
@@ -161,6 +164,18 @@ En Render el valor medido fue `3` (octubre de 2026): `X-Forwarded-For` traía la
 ### Plan gratuito de Render
 
 El servicio se duerme tras 15 minutos sin tráfico y el primer pedido siguiente puede tardar cerca de un minuto. Además, Render gratuito bloquea el tráfico saliente a los puertos SMTP, por eso los mails salen por la API HTTPS de Resend y no por SMTP.
+
+### Despliegue automático desde el CI
+
+El job `deploy` de `.github/workflows/ci.yml` corre en cada push a `main` (y en las ejecuciones manuales) cuando pasan los demás jobs. Compara los archivos cambiados y avisa a Render con un *deploy hook* solo del servicio cuyo directorio cambió: `apps/api/` usa el secreto `RENDER_DEPLOY_HOOK_API` y `apps/bot/`, `RENDER_DEPLOY_HOOK_BOT`. Si no hay un commit anterior contra el cual comparar, despliega los dos. Los hooks son secretos del repositorio en GitHub y no deben escribirse en el repositorio. El frontend no pasa por este job.
+
+Como un push a `main` que toque `apps/api/` despliega solo, **la migración tiene que estar aplicada antes del push o de fusionar el pull request**. Si no, la API nueva no arranca (ver «Aplicar el esquema»). Un cambio que solo toque `db/` no despliega nada: hay que aplicar la migración a mano.
+
+### Actividad programada
+
+`.github/workflows/keep-alive.yml` corre los lunes y jueves a las 14:17 UTC (y a mano) y consulta `GET /health/db` de la API, con hasta 5 intentos separados por 30 segundos por el arranque en frío de Render. Esa ruta ejecuta una consulta real contra la base, así que tanto la API como la base registran actividad. Si el secreto opcional `SUPABASE_PING_URL` está definido, el workflow también hace un pedido a esa URL. No evita que Render duerma el servicio entre ejecuciones.
+
+La URL de la API está escrita en el workflow: si cambia, actualizarla ahí (igual que en `apps/web/vercel.json`).
 
 ### Medir el rendimiento
 
@@ -200,7 +215,7 @@ Como el servicio gratuito se duerme, un mensaje puede llegar mientras el bot (o 
 1. Importar el repositorio en Vercel con **Root Directory** `apps/web` (Vercel detecta Vite: comando de build `vite build`, salida en `dist`).
 2. Cargar `VITE_API_URL` (URL de la API) y `VITE_VAPID_PUBLIC_KEY`.
 3. `apps/web/vercel.json` reescribe todas las rutas a `/index.html`. Sin esa regla, recargar `/historial` o abrir el link de recuperación de contraseña daría 404, porque son rutas del router del cliente.
-4. Si la URL de la API cambia, actualizarla también en `apps/web/vercel.json`: la política CSP (`connect-src`) solo permite pedidos a esa dirección y a la propia web. El mismo archivo fija el resto de los encabezados de seguridad de la web.
+4. Si la URL de la API cambia, actualizarla también en `apps/web/vercel.json`: la política CSP (`connect-src`) solo permite pedidos a esa dirección y a la propia web. El mismo archivo fija el resto de los encabezados de seguridad de la web. También fija `Cache-Control: public, max-age=31536000, immutable` para `/assets/*` (los archivos llevan un hash en el nombre). Si `VITE_API_URL` está definida al compilar, `index.html` agrega un `preconnect` hacia ese origen.
 5. Volver a la API y definir `FRONTEND_URL` con la URL que asignó Vercel, sin barra final. Si no coincide exactamente con el origen del navegador, las llamadas fallan por CORS.
 
 La PWA se registra con un service worker propio (`apps/web/src/sw.ts`, vite-plugin-pwa con `injectManifest`) que precachea los archivos de la aplicación y atiende las notificaciones push. Las notificaciones push en iOS solo funcionan con la PWA instalada en la pantalla de inicio y servida por HTTPS.
@@ -234,6 +249,10 @@ En la respuesta, `url` debe ser la del servicio del bot terminada en `/webhook`,
 # API: devuelve el estado y los primeros 7 caracteres del commit desplegado
 curl https://<URL_DE_LA_API>/health
 # {"status":"ok","commit":"abc1234"}
+
+# API y base: hace una consulta real (la usa también el workflow de actividad)
+curl https://<URL_DE_LA_API>/health/db
+# {"status":"ok","db":"ok"}   (503 con {"status":"error","db":"error"} si la base falla)
 
 # Bot: solo informa el estado
 curl https://<URL_DEL_BOT>/health
@@ -274,5 +293,7 @@ Cuando una clave se filtra, o por higiene, se cambia en el panel de cada servici
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` y `VITE_VAPID_PUBLIC_KEY` | API y Vercel                        | Las suscripciones push existentes dejan de funcionar: cada persona tiene que volver a activar las notificaciones |
 | `RESEND_API_KEY`                                                  | API                                 | Sin efecto para los usuarios                                                                                     |
 | Contraseña de la base                                             | Supabase y `DATABASE_URL` de la API | La API no conecta hasta tener la cadena nueva                                                                    |
+| `RENDER_DEPLOY_HOOK_API` y `RENDER_DEPLOY_HOOK_BOT`               | Secretos del repositorio en GitHub  | Hasta actualizarlos, el job `deploy` falla y los servicios no se redespliegan solos                              |
+| `SUPABASE_PING_URL`                                               | Secreto del repositorio en GitHub   | Solo afecta al pedido opcional del workflow de actividad                                                         |
 
 Usar siempre valores distintos en desarrollo y en producción: el `.env` local no debería contener ninguna clave de producción.
