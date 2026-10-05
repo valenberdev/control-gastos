@@ -6,6 +6,10 @@ Aplicación web instalable (PWA) para registrar gastos e ingresos personales, ta
 
 **Demo:** https://control-gastos-roan-eight.vercel.app · **Bot:** [@control_gastos_valen_bot](https://t.me/control_gastos_valen_bot) · **Despliegue:** [docs/deployment.md](docs/deployment.md)
 
+<p align="center">
+  <img src="docs/demo.gif" alt="Demostración: cargar un gasto en la app y ver el saldo y la tendencia" width="320">
+</p>
+
 ## En 2 minutos
 
 - **Qué es:** una API REST (Express y PostgreSQL), un bot de Telegram que usa esa misma API y una PWA en React, desplegados en planes gratuitos.
