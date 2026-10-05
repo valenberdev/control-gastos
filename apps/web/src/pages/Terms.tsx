@@ -60,8 +60,9 @@ export default function Terms() {
         El servicio se ofrece «tal cual», sin garantías de ningún tipo. Corre
         sobre planes gratuitos de terceros: puede tardar cerca de un minuto en
         responder después de un rato sin uso, tener interrupciones o perder
-        funcionalidades. No hay copias de respaldo garantizadas, así que no uses
-        la app como único registro de información importante.
+        funcionalidades. Las copias de respaldo se hacen a mano y sin garantía de
+        que existan o estén al día, así que no uses la app como único registro
+        de información importante.
       </p>
 
       <h2>7. No es asesoramiento financiero</h2>

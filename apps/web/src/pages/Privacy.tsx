@@ -6,7 +6,7 @@ const AAIP_URL = "https://www.argentina.gob.ar/aaip";
 
 export default function Privacy() {
   return (
-    <LegalPage title="Política de privacidad" updated="1 de octubre de 2026">
+    <LegalPage title="Política de privacidad" updated="5 de octubre de 2026">
       <p>
         Esta política explica qué datos guarda Control de Gastos, para qué los
         usa y cómo podés controlarlos.
@@ -28,24 +28,28 @@ export default function Privacy() {
         <li>
           <strong>Cuenta:</strong> tu email (para identificarte, iniciar sesión
           y enviarte el mail de recuperación), tu contraseña (solo se guarda un
-          hash: nadie puede leerla ni recuperarla) y tu zona horaria (para
-          decidir qué día es «hoy» al cargar un movimiento).
+          hash: nadie puede leerla ni recuperarla), tu zona horaria (para
+          decidir qué día es «hoy» al cargar un movimiento), la fecha y hora en
+          que creaste la cuenta y un número interno de versión de sesión, que
+          permite cerrar tus sesiones abiertas al restablecer la contraseña.
         </li>
         <li>
           <strong>Movimientos:</strong> el monto, la categoría (en los gastos),
-          la descripción opcional, la fecha y el origen (web o Telegram) de cada
-          gasto o ingreso, para mostrarte el saldo, los gráficos y el historial.
+          la descripción opcional, la fecha, el momento exacto en que se
+          registró y el origen (web o Telegram) de cada gasto o ingreso, para
+          mostrarte el saldo, los gráficos y el historial.
         </li>
         <li>
           <strong>Telegram (solo si lo vinculás):</strong> el número de
-          identificación de tu chat, para saber a qué cuenta corresponden tus
-          mensajes. El bot procesa lo que le escribís para registrar el
-          movimiento y no guarda un historial de la conversación.
+          identificación de tu chat y la fecha en que lo vinculaste, para saber
+          a qué cuenta corresponden tus mensajes. El bot procesa lo que le
+          escribís para registrar el movimiento y no guarda un historial de la
+          conversación.
         </li>
         <li>
           <strong>Notificaciones (solo si las activás):</strong> los datos
-          técnicos de la suscripción que genera tu navegador, necesarios para
-          enviarte los avisos.
+          técnicos de la suscripción que genera tu navegador y la fecha en que
+          se creó, necesarios para enviarte los avisos.
         </li>
         <li>
           <strong>Datos temporales:</strong> los códigos para vincular Telegram
@@ -82,10 +86,10 @@ export default function Privacy() {
       <h2>4. Cookies y almacenamiento local</h2>
       <p>
         La app no usa cookies. Guarda en el almacenamiento local de tu navegador
-        la sesión iniciada, tu preferencia de tema y si ya cerraste la guía para
-        instalar la app, y un service worker guarda en caché los archivos de la
-        aplicación para poder instalarla. Cerrar sesión borra la sesión
-        guardada.
+        la sesión iniciada (el token y tu email), tu preferencia de tema y si
+        cerraste o pospusiste la guía para instalar la app, y un service worker
+        guarda en caché los archivos de la aplicación para poder instalarla.
+        Cerrar sesión borra la sesión guardada.
       </p>
 
       <h2>5. Proveedores que intervienen</h2>
@@ -131,16 +135,17 @@ export default function Privacy() {
         Los datos se conservan mientras tu cuenta exista. Desde{" "}
         <Link to="/perfil">Perfil</Link> podés eliminarla: se borran de la base
         de datos tu cuenta y todo lo asociado (movimientos, vínculo de Telegram,
-        suscripciones a notificaciones y códigos pendientes). Los proveedores
-        pueden conservar copias técnicas y registros por un período limitado,
-        según sus propias políticas.
+        suscripciones a notificaciones y códigos de vínculo y de recuperación
+        pendientes). Los proveedores pueden conservar copias técnicas y
+        registros por un período limitado, según sus propias políticas.
       </p>
 
       <p>
-        Además se hacen copias de respaldo periódicas de la base de datos, que
-        se guardan de forma local y se usan solo para recuperar el servicio si
-        se pierden datos. Una cuenta eliminada puede seguir figurando en copias
-        anteriores hasta que se descartan, a los 90 días como máximo.
+        Además se hacen copias de respaldo de la base de datos, a mano y sin una
+        frecuencia fija, que se guardan de forma local y se usan solo para
+        recuperar el servicio si se pierden datos. Una cuenta eliminada puede
+        seguir figurando en copias anteriores: las de más de 90 días se
+        descartan cada vez que se hace un respaldo nuevo.
       </p>
 
       <h2>8. Seguridad</h2>
