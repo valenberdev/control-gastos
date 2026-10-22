@@ -249,6 +249,10 @@ Las rutas marcadas «Sesión» exigen `Authorization: Bearer <JWT>`; «Clave int
 | POST, DELETE | `/push/subscribe` | Sesión |
 | DELETE | `/auth/me` | Sesión (pide la contraseña) |
 
+### Documentación interactiva (OpenAPI)
+
+La API publica su especificación OpenAPI 3 y la muestra con Swagger UI en `GET /docs` (el JSON está en `/docs/openapi.json`). Cada endpoint indica sus respuestas posibles (400, 401, 404, 429…) y marca las inconsistencias conocidas del código. En local y desarrollo se puede probar con «Authorize» (token de `POST /auth/login`) y «Try it out»; con `NODE_ENV=production` queda solo de lectura. La especificación vive en `apps/api/src/docs/openapi.ts` y hay que actualizarla a mano cuando cambie una ruta.
+
 ## Estructura del repositorio
 
 ```

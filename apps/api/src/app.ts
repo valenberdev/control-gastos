@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import type { NextFunction, Request, Response } from "express";
+import { docsRouter } from "./docs/swaggerUi.js";
 import { logError } from "./lib/logger.js";
 import { SERVER_TIMING_ENABLED, serverTiming } from "./lib/serverTiming.js";
 import { requireAuth } from "./middleware/requireAuth.js";
@@ -36,6 +37,10 @@ if (!process.env.FRONTEND_URL && process.env.NODE_ENV === "production") {
     "FRONTEND_URL no está configurada: CORS solo va a aceptar http://localhost:5173.",
   );
 }
+
+// La documentación va antes del helmet global: lleva su propia política de
+// seguridad (más permisiva) y el resto de la API conserva la estricta.
+app.use("/docs", docsRouter);
 
 app.use(
   helmet({
