@@ -14,9 +14,9 @@
     "grammy": "^1.0.0"
   },
   "devDependencies": {
-    "@types/node": "^24.19.0",
+    "@types/node": "^24.19.2",
     "tsx": "^4.16.2",
     "typescript": "^5.5.4",
-    "vitest": "^5.0.0"
+    "vitest": "^5.0.5"
   }
 }
